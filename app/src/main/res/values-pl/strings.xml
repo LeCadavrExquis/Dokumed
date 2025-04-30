@@ -1,0 +1,41 @@
+<resources>
+    <string name="filters">Filtry</string>
+    <string name="type_of_exam">Typ badania</string>
+    <string name="date_range">Data od-do</string>
+    <string name="from">Od</string>
+    <string name="to">Do</string>
+    <string name="tags">Tagi</string>
+    <string name="cancel">Anuluj</string>
+    <string name="apply">Zastosuj</string>
+    <string name="ok">OK</string>
+    <string name="medical_record_type_consultation">Konsultacja</string>
+    <string name="medical_record_type_measurement">Pomiar</string>
+    <string name="medical_record_type_lab_test">Badanie laboratoryjne</string>
+    <string name="medical_record_type_imaging">Obrazowanie</string>
+    <string name="medical_record_type_symptom">Objaw</string>
+    <string name="medical_record_type_medication">Lek</string>
+    <string name="medical_record_type_rehabilitation">Rehabilitacja</string>
+    <string name="medical_record_type_hospitalization">Hospitalizacja</string>
+    <string name="medical_record_type_procedure">Procedura</string>
+    <string name="medical_record_type_surgery">Operacja</string>
+
+    <string name="statistic_metric_count_over_time">Policz w czasie</string>
+    <string name="statistic_metric_avg_measurement">Średni pomiar</string>
+    <string name="statistic_metric_measurement">Pomiary</string>
+    <string name="statistic_metric_type_distribution">Dystrybucja</string>
+    <string name="statistic_metric_top_tags">Top tag</string>
+    <string name="statistics_title">Statystyki</string>
+    <string name="back">Powrót</string>
+    <string name="chart_type">Typ wykresu</string>
+    <string name="bar_chart">Wykres słupkowy</string>
+    <string name="line_chart">Wykres liniowy</string>
+    <string name="no_chart_for_type">Brak wykresu dla tego typu</string>
+    <string name="no_data">Brak danych do wyświetlenia</string>
+    <string name="summary_min">Min: %.2f</string>
+    <string name="summary_max">Maks: %.2f</string>
+    <string name="summary_avg">Śr.: %.2f</string>
+    <string name="summary_count">Liczba: %d</string>
+    <string name="bottom_nav_records">Wpisy</string>
+    <string name="bottom_nav_statistics">Statystyki</string>
+    <string name="bottom_nav_export">Eksport</string>
+</resources>

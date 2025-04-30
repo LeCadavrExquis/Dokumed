@@ -1,0 +1,43 @@
+<resources>
+    <string name="filters">Filters</string>
+    <string name="type_of_exam">Type of exam</string>
+    <string name="date_range">Date range</string>
+    <string name="from">From</string>
+    <string name="to">To</string>
+    <string name="tags">Tags</string>
+    <string name="cancel">Cancel</string>
+    <string name="apply">Apply</string>
+    <string name="ok">OK</string>
+    <string name="app_name" translatable="false">Dokumed</string>
+
+    <string name="medical_record_type_consultation">Consultation</string>
+    <string name="medical_record_type_measurement">Measurement</string>
+    <string name="medical_record_type_lab_test">Lab Test</string>
+    <string name="medical_record_type_imaging">Imaging</string>
+    <string name="medical_record_type_symptom">Symptom</string>
+    <string name="medical_record_type_medication">Medication</string>
+    <string name="medical_record_type_rehabilitation">Rehabilitation</string>
+    <string name="medical_record_type_hospitalization">Hospitalization</string>
+    <string name="medical_record_type_procedure">Procedure</string>
+    <string name="medical_record_type_surgery">Surgery</string>
+
+    <string name="statistic_metric_count_over_time">Count over time</string>
+    <string name="statistic_metric_avg_measurement">Average measurement</string>
+    <string name="statistic_metric_measurement">Measurements</string>
+    <string name="statistic_metric_type_distribution">Distribution</string>
+    <string name="statistic_metric_top_tags">Top tags</string>
+    <string name="statistics_title">Statistics</string>
+    <string name="back">Back</string>
+    <string name="chart_type">Chart type</string>
+    <string name="bar_chart">Bar chart</string>
+    <string name="line_chart">Line chart</string>
+    <string name="no_chart_for_type">No chart available for this type</string>
+    <string name="no_data">No data to display</string>
+    <string name="summary_min">Min: %.2f</string>
+    <string name="summary_max">Max: %.2f</string>
+    <string name="summary_avg">Avg: %.2f</string>
+    <string name="summary_count">Count: %d</string>
+    <string name="bottom_nav_records">Records</string>
+    <string name="bottom_nav_statistics">Statistics</string>
+    <string name="bottom_nav_export">Export</string>
+</resources>
