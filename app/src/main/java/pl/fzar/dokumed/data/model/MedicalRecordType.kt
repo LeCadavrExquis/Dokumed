@@ -11,7 +11,6 @@ enum class MedicalRecordType {
     IMAGING,
     SYMPTOM,
     MEDICATION,
-    REHABILITATION,
     HOSPITALIZATION,
     PROCEDURE,
     SURGERY,
@@ -22,7 +21,6 @@ val consultationRecords = listOf(
     MedicalRecordType.SURGERY,
     MedicalRecordType.HOSPITALIZATION,
     MedicalRecordType.PROCEDURE,
-    MedicalRecordType.REHABILITATION,
 )
 
 val measurementRecords = listOf(
@@ -45,7 +43,6 @@ fun MedicalRecordType.getStringResId(): Int {
         MedicalRecordType.IMAGING -> R.string.medical_record_type_imaging
         MedicalRecordType.SYMPTOM -> R.string.medical_record_type_symptom
         MedicalRecordType.MEDICATION -> R.string.medical_record_type_medication
-        MedicalRecordType.REHABILITATION -> R.string.medical_record_type_rehabilitation
         MedicalRecordType.HOSPITALIZATION -> R.string.medical_record_type_hospitalization
         MedicalRecordType.PROCEDURE -> R.string.medical_record_type_procedure
         MedicalRecordType.SURGERY -> R.string.medical_record_type_surgery

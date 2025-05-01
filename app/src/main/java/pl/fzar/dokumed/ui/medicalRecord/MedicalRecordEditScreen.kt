@@ -18,7 +18,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
@@ -27,7 +28,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -50,15 +50,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.LocalDate
 import pl.fzar.dokumed.R
-import pl.fzar.dokumed.data.model.ClinicalDataRecord
-import pl.fzar.dokumed.data.model.ConsultationRecord
-import pl.fzar.dokumed.data.model.MeasurementRecord
+import pl.fzar.dokumed.data.model.ClinicalData
+import pl.fzar.dokumed.data.model.Measurement
 import pl.fzar.dokumed.data.model.MedicalRecord
 import pl.fzar.dokumed.data.model.MedicalRecordType
 import pl.fzar.dokumed.data.model.clinicalDataRecords
@@ -66,7 +63,6 @@ import pl.fzar.dokumed.data.model.consultationRecords
 import pl.fzar.dokumed.data.model.dummyRecords
 import pl.fzar.dokumed.data.model.getLocalizedString
 import pl.fzar.dokumed.data.model.measurementRecords
-import java.util.Calendar
 import kotlin.uuid.Uuid
 
 
@@ -76,34 +72,38 @@ fun MedicalRecordEditScreen(
     medicalRecord: MedicalRecord?,
     onBackClick: () -> Unit,
     onRecordEdited: (MedicalRecord) -> Unit,
-    copyFileToLocalStorage: (Context, Uri, String) -> Unit,
+    copyFileToLocalStorage: (Context, Uri, String, (String) -> Unit) -> Unit,
     onDeleteRecord: ((MedicalRecord) -> Unit)? = null
 ) {
     val context = LocalContext.current
     
     // Default values for new record
     val isNewRecord = medicalRecord == null
-    val initialDate = medicalRecord?.date ?: LocalDate(2025, 4, 30) // Current date
+    val initialDate = medicalRecord?.date ?: LocalDate(2025, 4, 30)
     val initialType = medicalRecord?.type ?: MedicalRecordType.CONSULTATION
     
     var date by remember { mutableStateOf(initialDate) }
     var type by remember { mutableStateOf(initialType) }
     var expandedTypeSelector by remember { mutableStateOf(false) }
     var description by remember { mutableStateOf(medicalRecord?.description ?: "") }
+    var doctor by remember { mutableStateOf(medicalRecord?.doctor ?: "") }
     var notes by remember { mutableStateOf(medicalRecord?.notes ?: "") }
-    var tags by remember { mutableStateOf(medicalRecord?.tags ?: emptySet()) }
+    var tags by remember { mutableStateOf(medicalRecord?.tags?.toSet() ?: emptySet()) }
     var newTag by remember { mutableStateOf("") }
     
+    // Clinical Data fields (can now hold multiple files)
+    var clinicalDataList by remember {
+        mutableStateOf(medicalRecord?.clinicalData ?: emptyList())
+    }
+
+    // Measurement fields (for MEASUREMENT, MEDICATION, SYMPTOM)
+    var measurement by remember {
+        // Initialize with a non-null Measurement object, even for new records
+        mutableStateOf(medicalRecord?.measurements?.firstOrNull() ?: Measurement())
+    }
+
     // State for delete confirmation dialog
     var showDeleteConfirmation by remember { mutableStateOf(false) }
-
-    // Type-specific fields
-    var doctor by remember { mutableStateOf((medicalRecord as? ConsultationRecord)?.doctor ?: "") }
-    var filePath by remember { mutableStateOf((medicalRecord as? ConsultationRecord)?.filePath ?: (medicalRecord as? ClinicalDataRecord)?.filePath) }
-    var fileMimeType by remember { mutableStateOf((medicalRecord as? ConsultationRecord)?.fileMimeType ?: (medicalRecord as? ClinicalDataRecord)?.fileMimeType) }
-    var testName by remember { mutableStateOf((medicalRecord as? MeasurementRecord)?.testName ?: (medicalRecord as? ClinicalDataRecord)?.testName ?: "") }
-    var valueText by remember { mutableStateOf((medicalRecord as? MeasurementRecord)?.value?.toString() ?: "") }
-    var unit by remember { mutableStateOf((medicalRecord as? MeasurementRecord)?.unit ?: "") }
 
     val datePickerDialog = remember {
         DatePickerDialog(
@@ -121,7 +121,8 @@ fun MedicalRecordEditScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            var fileName = "uploaded_file"
+            var fileName = "uploaded_file_${Uuid.random()}" // Ensure unique default name
+            val mimeType = context.contentResolver.getType(it) // Get MIME type
             if (uri.scheme == "content") {
                 val cursor = context.contentResolver.query(uri, null, null, null, null)
                 cursor?.use {
@@ -133,9 +134,16 @@ fun MedicalRecordEditScreen(
                     }
                 }
             }
-            copyFileToLocalStorage(context, it, fileName)
-            filePath = it.toString()
-            fileMimeType = context.contentResolver.getType(it)
+            copyFileToLocalStorage(context, it, fileName) { savedFilePath ->
+                // Create a new ClinicalData object for the uploaded file
+                val newClinicalData = ClinicalData(
+                    filePath = savedFilePath,
+                    fileMimeType = mimeType,
+                    fileName = fileName // Store the original filename
+                )
+                // Add the new file to the list
+                clinicalDataList = clinicalDataList + newClinicalData
+            }
         }
     }
 
@@ -167,43 +175,50 @@ fun MedicalRecordEditScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    val record = when (type) {
-                        in consultationRecords -> ConsultationRecord(
-                            id = medicalRecord?.id ?: Uuid.random(),
-                            date = date,
-                            type = type,
-                            description = description,
-                            notes = notes,
-                            tags = tags.toList(),
-                            doctor = doctor,
-                            filePath = filePath,
-                            fileMimeType = fileMimeType
-                        )
-                        in measurementRecords -> MeasurementRecord(
-                            id = medicalRecord?.id ?: Uuid.random(),
-                            date = date,
-                            type = type,
-                            description = description,
-                            notes = notes,
-                            tags = tags.toList(),
-                            testName = testName,
-                            value = valueText.toDoubleOrNull(),
-                            unit = unit
-                        )
-                        in clinicalDataRecords -> ClinicalDataRecord(
-                            id = medicalRecord?.id ?: Uuid.random(), // Generate new ID if null
-                            date = date,
-                            type = type,
-                            description = description,
-                            notes = notes,
-                            tags = tags.toList(),
-                            testName = testName,
-                            filePath = filePath,
-                            fileMimeType = fileMimeType
-                        )
-                        else -> throw IllegalArgumentException("Invalid record type")
+                    // Ensure measurement is handled safely
+                    val currentMeasurement = measurement // Capture current state
+
+                    val measurementsList = if (type in measurementRecords && currentMeasurement != null) {
+                        // Use safe access or provide defaults if needed
+                        listOf(currentMeasurement.copy(value = currentMeasurement.value?.toString()?.toDoubleOrNull()))
+                    } else {
+                        emptyList()
                     }
-                    onRecordEdited(record)
+
+                    // Use the clinicalDataList directly if the type supports it
+                    val finalClinicalDataList = if (type in clinicalDataRecords || type in consultationRecords) {
+                        clinicalDataList
+                    } else {
+                        emptyList()
+                    }
+
+                    // Create or update the record
+                    val updatedRecord = if (isNewRecord) {
+                        MedicalRecord(
+                            id = Uuid.random(),
+                            date = date,
+                            type = type,
+                            description = description,
+                            notes = notes,
+                            tags = tags.toList(),
+                            measurements = measurementsList,
+                            clinicalData = finalClinicalDataList, // Use the potentially updated list
+                            doctor = doctor
+                        )
+                    } else {
+                        medicalRecord!!.copy(
+                            date = date,
+                            type = type,
+                            description = description,
+                            notes = notes,
+                            tags = tags.toList(),
+                            measurements = measurementsList,
+                            clinicalData = finalClinicalDataList, // Use the potentially updated list
+                            doctor = doctor
+                        )
+                    }
+
+                    onRecordEdited(updatedRecord)
                 },
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
@@ -276,6 +291,14 @@ fun MedicalRecordEditScreen(
             )
             Spacer(Modifier.height(8.dp))
 
+            OutlinedTextField(
+                value = doctor ?: "",
+                onValueChange = { doctor = it },
+                label = { Text("Lekarz") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
+
             // Notes
             OutlinedTextField(
                 value = notes,
@@ -314,7 +337,7 @@ fun MedicalRecordEditScreen(
             FlowRow(modifier = Modifier.fillMaxWidth()) {
                 tags.forEach { tag ->
                     AssistChip(
-                        onClick = { tags.filter { it !=tag } },
+                        onClick = { tags = tags.filter { it != tag }.toSet() },
                         label = { Text(tag) },
                         trailingIcon = {
                             Icon(
@@ -331,71 +354,60 @@ fun MedicalRecordEditScreen(
 
             // Type-specific fields
             when (type) {
-                in consultationRecords -> {
-                    OutlinedTextField(
-                        value = doctor,
-                        onValueChange = { doctor = it },
-                        label = { Text("Lekarz") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                in consultationRecords, in clinicalDataRecords -> {
+                    // Section for managing multiple files
+                    Text("Załączone pliki:", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
-                    // File attachment
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Button(onClick = { filePickerLauncher.launch("*") }) {
-                            Text("Załącz plik")
+
+                    // List of attached files
+                    if (clinicalDataList.isNotEmpty()) {
+                        LazyColumn(modifier = Modifier.height(150.dp)) { // Limit height
+                            items(clinicalDataList) { fileData ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = fileData.fileName ?: fileData.filePath?.substringAfterLast('/') ?: "Nieznany plik",
+                                        modifier = Modifier.weight(1f).padding(end = 8.dp)
+                                    )
+                                    IconButton(
+                                        onClick = {
+                                            clinicalDataList = clinicalDataList.filter { it.id != fileData.id }
+                                            // Optional: Delete the actual file from storage here if needed
+                                        },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(Icons.Filled.Close, contentDescription = "Usuń plik")
+                                    }
+                                }
+                            }
                         }
-                        Spacer(Modifier.width(8.dp))
-                        filePath?.let {
-                            Text(it.takeLast(30), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
+                    } else {
+                        Text("Brak załączonych plików.")
                     }
+
                     Spacer(Modifier.height(8.dp))
+
+                    // Button to add a new file
+                    Button(onClick = { filePickerLauncher.launch("*/*") }) {
+                        Icon(Icons.Filled.Add, contentDescription = "Dodaj plik", modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Dodaj plik")
+                    }
+                    Spacer(Modifier.height(16.dp)) // Add space after file section
                 }
                 in measurementRecords -> {
-                    OutlinedTextField(
-                        value = testName,
-                        onValueChange = { testName = it },
-                        label = { Text("Nazwa testu") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = valueText,
-                        onValueChange = { valueText = it },
-                        label = { Text("Wartość") },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = unit,
-                        onValueChange = { unit = it },
-                        label = { Text("Jednostka") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-                in clinicalDataRecords -> {
-                    OutlinedTextField(
-                        value = testName,
-                        onValueChange = { testName = it },
-                        label = { Text("Nazwa badania") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    // File attachment
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Button(onClick = { filePickerLauncher.launch("*") }) {
-                            Text("Załącz plik")
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        filePath?.let {
-                            Text(it.takeLast(30), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
+                    measurement?.let { m -> // Use let for safe access
+                        MeasurementFields(
+                            measurement = m, // Pass non-null measurement
+                            onMeasurementChange = { measurement = it }
+                        )
                     }
-                    Spacer(Modifier.height(8.dp))
                 }
-                else -> {}
+                // Removed ClinicalDataFields call as file handling is now above
+                 else -> {} // Handle other types if necessary (no specific fields for others currently)
             }
 
             // Add some extra space at the bottom to ensure content isn't hidden behind the FAB
@@ -436,7 +448,7 @@ fun PreviewMedicalRecordEditScreen() {
         medicalRecord = dummyRecords[7],
         onBackClick = {},
         onRecordEdited = {},
-        copyFileToLocalStorage = { _, _, _ -> },
+        copyFileToLocalStorage = { _, _, _, _ -> },
         onDeleteRecord = { }
     )
 }
@@ -448,7 +460,7 @@ fun PreviewNewMedicalRecordEditScreen() {
         medicalRecord = null, // New record
         onBackClick = {},
         onRecordEdited = {},
-        copyFileToLocalStorage = { _, _, _ -> },
+        copyFileToLocalStorage = { _, _, _, _ -> },
         onDeleteRecord = null
     )
 }

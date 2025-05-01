@@ -1,13 +1,8 @@
 package pl.fzar.dokumed.data.repository
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.datetime.LocalDate
 import pl.fzar.dokumed.data.entity.MedicalRecordWithTags
-import pl.fzar.dokumed.data.model.ClinicalDataRecord
-import pl.fzar.dokumed.data.model.ConsultationRecord
-import pl.fzar.dokumed.data.model.MeasurementRecord
 import pl.fzar.dokumed.data.model.MedicalRecord
-import pl.fzar.dokumed.data.model.MedicalRecordType
 import kotlin.uuid.Uuid
 
 /**
@@ -23,21 +18,6 @@ interface MedicalRecordRepository {
      * Get a medical record by ID
      */
     suspend fun getMedicalRecordById(id: Uuid): MedicalRecord?
-    
-    /**
-     * Get a consultation record by ID
-     */
-    suspend fun getConsultationRecordById(id: Uuid): ConsultationRecord?
-    
-    /**
-     * Get a clinical data record by ID
-     */
-    suspend fun getClinicalDataRecordById(id: Uuid): ClinicalDataRecord?
-    
-    /**
-     * Get a measurement record by ID
-     */
-    suspend fun getMeasurementRecordById(id: Uuid): MeasurementRecord?
     
     /**
      * Insert a new medical record

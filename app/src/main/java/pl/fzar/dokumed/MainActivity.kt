@@ -9,8 +9,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -18,12 +20,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import kotlinx.datetime.LocalDate
-import pl.fzar.dokumed.data.AppDatabase
-import pl.fzar.dokumed.data.model.ConsultationRecord
-import pl.fzar.dokumed.data.model.MedicalRecordType
-import pl.fzar.dokumed.data.model.StatisticMetric
-import pl.fzar.dokumed.data.model.dummyRecords
 import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordDetailsScreen
 import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordEditScreen
 import pl.fzar.dokumed.ui.statistics.StatisticsScreen
@@ -80,7 +76,6 @@ class MainActivity : ComponentActivity() {
                                 records = records,
                                 allTags = allTags,
                                 onRecordClick = { record ->
-                                    medVM.loadRecordDetails(record.type, record.id)
                                     navController.navigate("record_details/${record.id}")
                                 },
                                 onAddRecordClick = { navController.navigate("record_new") },
@@ -99,26 +94,58 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("record_details/{recordId}") { backStackEntry ->
                             val recordIdString = backStackEntry.arguments?.getString("recordId")
-                            val recordId = recordIdString?.let { Uuid.parse(it) }
+                            val recordId = recordIdString?.let {
+                                try { Uuid.parse(it) } catch (e: IllegalArgumentException) { null }
+                            }
                             val currentRecord by medVM.currentRecord.collectAsState()
 
-                            if (recordId != null && currentRecord != null) {
+                            // Use LaunchedEffect to load details when recordId is valid
+                            LaunchedEffect(recordId) {
+                                if (recordId != null) {
+                                    // Assuming loadRecordDetailsById exists in VM
+                                    medVM.loadRecordDetailsById(recordId)
+                                } else {
+                                    // Handle invalid ID if necessary, maybe clear currentRecord
+                                    medVM.clearCurrentRecord() // Add this function to VM
+                                }
+                            }
+
+                            if (recordId == null) {
+                                Text("Nieprawidłowy ID rekordu") // Handle invalid ID from route
+                            } else if (currentRecord != null && currentRecord?.id == recordId) {
+                                // Ensure the loaded record matches the requested ID
                                 MedicalRecordDetailsScreen(
-                                    medicalRecord = currentRecord!!,
-                                    recordId = recordId.toString(),
+                                    medicalRecord = currentRecord!!, // Not null here due to check
+                                    recordId = recordId.toString(), // Pass the validated ID string
                                     onNavigateBack = { navController.popBackStack() },
                                     onEditRecord = { navController.navigate("record_edit/${currentRecord!!.id}") },
                                 )
                             } else {
-                                Text("Nie znaleziono rekordu") // Obsługa błędu
+                                // Show loading indicator while currentRecord is null or doesn't match
+                                CircularProgressIndicator()
+                                // Optionally add Text("Ładowanie...")
                             }
                         }
                         composable("record_edit/{recordId}") { backStackEntry ->
                             val recordIdString = backStackEntry.arguments?.getString("recordId")
-                            val recordId = recordIdString?.let { Uuid.parse(it) }
+                             val recordId = recordIdString?.let {
+                                try { Uuid.parse(it) } catch (e: IllegalArgumentException) { null }
+                            }
                             val currentRecord by medVM.currentRecord.collectAsState()
 
-                            if (recordId != null && currentRecord != null) {
+                            // Ensure correct record is loaded for editing
+                            LaunchedEffect(recordId) {
+                                if (recordId != null && currentRecord?.id != recordId) {
+                                     medVM.loadRecordDetailsById(recordId) // Ensure correct record is loaded
+                                } else if (recordId == null) {
+                                     medVM.clearCurrentRecord() // Add this function to VM
+                                }
+                            }
+
+
+                            if (recordId == null) {
+                                Text("Nieprawidłowy ID rekordu do edycji")
+                            } else if (currentRecord != null && currentRecord?.id == recordId) {
                                 MedicalRecordEditScreen(
                                     medicalRecord = currentRecord!!,
                                     onBackClick = { navController.popBackStack() },
@@ -129,11 +156,13 @@ class MainActivity : ComponentActivity() {
                                     copyFileToLocalStorage = medVM::copyFileToLocalStorage,
                                     onDeleteRecord = { record ->
                                         medVM.deleteRecord(record)
-                                        navController.popBackStack()
+                                        navController.popBackStack() // Navigate back after delete
                                     }
                                 )
                             } else {
-                                Text("Nie można załadować rekordu do edycji") // Obsługa błędu
+                                // Loading indicator for edit screen
+                                CircularProgressIndicator()
+                                // Optionally add Text("Ładowanie edycji...")
                             }
                         }
                         composable("record_new") {

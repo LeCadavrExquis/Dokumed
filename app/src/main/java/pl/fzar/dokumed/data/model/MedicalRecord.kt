@@ -3,109 +3,95 @@ package pl.fzar.dokumed.data.model
 import kotlinx.datetime.LocalDate
 import kotlin.uuid.Uuid
 
-open class MedicalRecord(
-    open val id: Uuid = Uuid.random(),
-    open val date: LocalDate,
-    open val type: MedicalRecordType,
-    open val description: String?,
-    open val notes: String?,
-    open val tags: List<String> = emptyList(),
+data class MedicalRecord(
+    val id: Uuid = Uuid.random(),
+    val date: LocalDate,
+    val type: MedicalRecordType,
+    val description: String?,
+    val doctor: String?,
+    val notes: String?,
+    val tags: List<String> = emptyList(),
+    val clinicalData: List<ClinicalData> = emptyList(),
+    val measurements: List<Measurement> = emptyList(),
 )
 
 val dummyRecords = listOf(
-    ConsultationRecord(
-        date = LocalDate(2025, 4, 20),
+    MedicalRecord(
+        date = LocalDate(2025, 5, 1),
         type = MedicalRecordType.CONSULTATION,
-        description = "Kontrolna wizyta u internisty.",
-        notes = "Pacjent czuje się dobrze.",
-        doctor = "Dr. Anna Kowalska",
-        tags = listOf("Ważne", "Internista")
+        description = "Wizyta kontrolna u lekarza rodzinnego",
+        notes = "Zalecenia: więcej ruchu",
+        tags = listOf("lekarz", "kontrola"),
+        doctor = "dr Michał Pałkowski",
     ),
-    MeasurementRecord(
-        date = LocalDate(2025, 4, 22),
+    MedicalRecord(
+        date = LocalDate(2025, 4, 28),
         type = MedicalRecordType.MEASUREMENT,
-        description = "Pomiar ciśnienia krwi.",
-        notes = "Zmierzono rano po przebudzeniu.",
-        value = 120.0,
-        unit = "mmHg",
-        tags = listOf(),
-        testName = "Ciśnienie krwi"
+        description = "Ciśnienie krwi",
+        notes = "Rano, przed śniadaniem",
+        tags = listOf("ciśnienie"),
+        measurements = listOf(Measurement(value = 120.0, unit = "mmHg")),
+        doctor = "dr Kacper Gała",
     ),
-    ClinicalDataRecord(
-        date = LocalDate(2025, 4, 25),
+    MedicalRecord(
+        date = LocalDate(2025, 4, 20),
         type = MedicalRecordType.LAB_TEST,
-        description = "Wyniki morfologii.",
-        notes = "Wszystkie parametry w normie.",
-        testName = "Morfologia krwi",
+        description = "Badanie krwi - morfologia",
+        notes = "Wszystko w normie",
+        tags = listOf("krew"),
+        clinicalData = listOf(ClinicalData(filePath = null, fileMimeType = null)),
+        doctor = "dr Patryk Kukła",
     ),
-    ClinicalDataRecord(
+    MedicalRecord(
         date = LocalDate(2025, 4, 15),
         type = MedicalRecordType.IMAGING,
-        description = "Zdjęcie RTG klatki piersiowej.",
-        notes = null,
-        testName = "RTG",
-        tags = listOf(),
-        filePath = null,
-        fileMimeType = null,
+        description = "RTG klatki piersiowej",
+        notes = "Brak zmian patologicznych",
+        tags = listOf("rtg"),
+        clinicalData = listOf(ClinicalData(filePath = null, fileMimeType = null)),
+        doctor = "dr Monika Piekło",
     ),
-    MeasurementRecord(
-        date = LocalDate(2025, 4, 23),
+    MedicalRecord(
+        date = LocalDate(2025, 4, 10),
         type = MedicalRecordType.SYMPTOM,
-        description = "Ból głowy.",
-        notes = "Tępy, zlokalizowany w okolicy czołowej.",
-        tags = listOf("Ból"),
-        testName = "Ból głowy",
-        value = null,
-        unit = null,
+        description = "Ból głowy",
+        notes = "Tępy, popołudniami",
+        tags = listOf("ból", "głowa"),
+        measurements = listOf(Measurement(value = null, unit = null)),
+        doctor = "dr Kasia Demon",
     ),
-    MeasurementRecord(
-        date = LocalDate(2025, 4, 1),
+    MedicalRecord(
+        date = LocalDate(2025, 4, 5),
         type = MedicalRecordType.MEDICATION,
-        description = "Przyjmowanie leku na nadciśnienie.",
-        notes = "Dawka 5mg raz dziennie rano.",
-        tags = listOf("Leki", "Nadciśnienie"),
-        testName = "Medicardio",
-        value = 2.0,
-        unit = "mg"
+        description = "Amlodypina",
+        notes = "Dawka 5mg raz dziennie",
+        tags = listOf("leki", "nadciśnienie"),
+        measurements = listOf(Measurement(value = 5.0, unit = "mg")),
+        doctor = "dr Wacek Placek",
     ),
-    ConsultationRecord(
-        date = LocalDate(2025, 4, 24),
-        type = MedicalRecordType.REHABILITATION,
-        description = "Sesja rehabilitacyjna po urazie kolana.",
-        notes = "Wykonano ćwiczenia wzmacniające mięśnie uda.",
-        tags = listOf("Rehabilitacja", "Kolano"),
-        filePath = null,
-        fileMimeType = null,
-        doctor = null
-    ),
-    ConsultationRecord(
+    MedicalRecord(
         date = LocalDate(2025, 3, 20),
         type = MedicalRecordType.HOSPITALIZATION,
-        description = "Pobyt w szpitalu z powodu zapalenia płuc.",
-        notes = "Leczenie antybiotykami.",
-        tags = listOf("Szpital", "Zapalenie płuc"),
-        filePath = null,
-        fileMimeType = null,
-        doctor = null
+        description = "Pobyt w szpitalu z powodu zapalenia płuc",
+        notes = "Leczenie antybiotykami",
+        tags = listOf("szpital", "zapalenie płuc"),
+        doctor = "dr Piotr Kolanko",
     ),
-    ClinicalDataRecord(
-        date = LocalDate(2025, 4, 5),
+    MedicalRecord(
+        date = LocalDate(2025, 3, 10),
         type = MedicalRecordType.PROCEDURE,
-        description = "EKG.",
-        notes = "Wynik bez istotnych odchyleń.",
-        tags = listOf("Diagnostyka"),
-        filePath = null,
-        fileMimeType = null,
-        testName = "EKG",
+        description = "EKG serca",
+        notes = "Wynik prawidłowy",
+        tags = listOf("ekg"),
+        clinicalData = listOf(ClinicalData(filePath = null, fileMimeType = null)),
+        doctor = "dr Paweł Bułka",
     ),
-    ConsultationRecord(
+    MedicalRecord(
         date = LocalDate(2025, 2, 1),
         type = MedicalRecordType.SURGERY,
-        description = "Operacja usunięcia wyrostka robaczkowego.",
-        notes = "Przebieg bez komplikacji.",
-        tags = listOf("Operacja"),
-        filePath = null,
-        fileMimeType = null,
-        doctor = "Dr. Piotr Nowak"
+        description = "Operacja usunięcia wyrostka robaczkowego",
+        notes = "Przebieg bez komplikacji",
+        tags = listOf("operacja", "wyrostek"),
+        doctor = "dr Marek Robaczek",
     )
 )

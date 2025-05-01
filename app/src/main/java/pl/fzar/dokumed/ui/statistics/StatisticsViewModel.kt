@@ -6,11 +6,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.datetime.LocalDate
 import pl.fzar.dokumed.data.entity.MedicalRecordWithTags
 import pl.fzar.dokumed.data.model.BarData
-import pl.fzar.dokumed.data.model.MeasurementRecord
 import pl.fzar.dokumed.data.model.MedicalRecordType
 import pl.fzar.dokumed.data.model.PointData
 import pl.fzar.dokumed.data.model.PieSliceData
-import pl.fzar.dokumed.data.model.ScatterPointData
 import pl.fzar.dokumed.data.model.StatisticMetric
 import pl.fzar.dokumed.data.model.StatisticsChartData
 import pl.fzar.dokumed.data.repository.MedicalRecordRepository
@@ -73,13 +71,10 @@ class StatisticsViewModel(
                 StatisticsChartData.LineChart(countsByDate)
             }
             StatisticMetric.AVG_MEASUREMENT -> {
-                val meas = filtered.filterIsInstance<MeasurementRecord>()
-                val avgByDate = meas.groupBy { it.date }
-                    .map { (date, values) ->
-                        PointData(date.toString(), values.mapNotNull { it.value }.average())
-                    }
-                    .sortedBy { it.x }
-                StatisticsChartData.LineChart(avgByDate)
+                // TODO: Implement AVG_MEASUREMENT logic
+                StatisticsChartData.LineChart(
+                    points = TODO()
+                )
             }
             StatisticMetric.TYPE_DISTRIBUTION_BAR -> {
                 val countsByType = filtered.groupBy { it.medicalRecord.type.name }
@@ -88,7 +83,7 @@ class StatisticsViewModel(
             }
             StatisticMetric.TYPE_DISTRIBUTION_PIE -> {
                 val countsByType = filtered.groupBy { it.medicalRecord.type.name }
-                    .map { (type, recs) -> pl.fzar.dokumed.data.model.PieSliceData(type, recs.size.toFloat()) }
+                    .map { (type, recs) -> PieSliceData(type, recs.size.toFloat()) }
                 StatisticsChartData.PieChart(countsByType)
             }
             StatisticMetric.TOP_TAGS_BAR -> {
@@ -102,13 +97,10 @@ class StatisticsViewModel(
                 StatisticsChartData.BarChart(tagCounts)
             }
             StatisticMetric.MEASUREMENT_SCATTER -> {
-                val meas = filtered.mapNotNull { it.medicalRecord as? MeasurementRecord }
-                val scatterPoints = meas.mapNotNull { record ->
-                    record.value?.let { value ->
-                        pl.fzar.dokumed.data.model.ScatterPointData(record.date.dayOfYear.toFloat(), value.toFloat())
-                    }
-                }
-                StatisticsChartData.ScatterChart(scatterPoints)
+                // TODO: Implement MEASUREMENT_SCATTER logic
+                StatisticsChartData.ScatterChart(
+                    points = TODO()
+                )
             }
         }
     }

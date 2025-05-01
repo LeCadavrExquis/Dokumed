@@ -32,7 +32,7 @@ val appModule = module {
     
     // Repositories
     single<MedicalRecordRepository> {
-        MedicalRecordRepositoryImpl(get())
+        MedicalRecordRepositoryImpl(get(), get())
     }
     single<TagRepository> {
         TagRepositoryImpl(get())

@@ -1,29 +1,22 @@
 package pl.fzar.dokumed.data.repository
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.datetime.LocalDate
 import pl.fzar.dokumed.data.dao.MedicalRecordDao
+import pl.fzar.dokumed.data.entity.ClinicalDataEntity
+import pl.fzar.dokumed.data.entity.MeasurementEntity
+import pl.fzar.dokumed.data.entity.MedicalRecordEntity
+import pl.fzar.dokumed.data.entity.MedicalRecordTagCrossRef
 import pl.fzar.dokumed.data.entity.MedicalRecordWithTags
-import pl.fzar.dokumed.data.entity.toClinicalDataRecord
-import pl.fzar.dokumed.data.entity.toConsultationRecord
-import pl.fzar.dokumed.data.entity.toMeasurementRecord
-import pl.fzar.dokumed.data.model.ClinicalDataRecord
-import pl.fzar.dokumed.data.model.ConsultationRecord
-import pl.fzar.dokumed.data.model.MeasurementRecord
+import pl.fzar.dokumed.data.entity.TagEntity
+import pl.fzar.dokumed.data.model.ClinicalData
+import pl.fzar.dokumed.data.model.Measurement
 import pl.fzar.dokumed.data.model.MedicalRecord
-import pl.fzar.dokumed.data.model.MedicalRecordType
-import pl.fzar.dokumed.data.model.toClinicalDataRecordEntity
-import pl.fzar.dokumed.data.model.toConsultationRecordEntity
-import pl.fzar.dokumed.data.model.toMeasurementRecordEntity
-import pl.fzar.dokumed.data.model.toMedicalRecordEntity
 import java.io.File
 import kotlin.uuid.Uuid
 
-/**
- * Implementation of the MedicalRecordRepository interface
- */
 class MedicalRecordRepositoryImpl(
-    private val medicalRecordDao: MedicalRecordDao
+    private val medicalRecordDao: MedicalRecordDao,
+    private val tagRepository: TagRepository
 ) : MedicalRecordRepository {
 
     override fun getAllRecords(): Flow<List<MedicalRecordWithTags>> {
@@ -31,113 +24,126 @@ class MedicalRecordRepositoryImpl(
     }
 
     override suspend fun getMedicalRecordById(id: Uuid): MedicalRecord? {
-        val record = medicalRecordDao.getMedicalRecordWithTagsById(id) ?: return null
-        return when (record.medicalRecord.type) {
-            in pl.fzar.dokumed.data.model.consultationRecords -> {
-                val consultationRecord = medicalRecordDao.getConsultationRecordWithDetails(id)
-                consultationRecord?.toConsultationRecord()
-            }
-            in pl.fzar.dokumed.data.model.clinicalDataRecords -> {
-                val clinicalDataRecord = medicalRecordDao.getClinicalDataRecordWithDetails(id)
-                clinicalDataRecord?.toClinicalDataRecord()
-            }
-            in pl.fzar.dokumed.data.model.measurementRecords -> {
-                val measurementRecord = medicalRecordDao.getMeasurementRecordWithDetails(id)
-                measurementRecord?.toMeasurementRecord()
-            }
-            else -> null
+        val details = medicalRecordDao.getMedicalRecordWithDetails(id) ?: return null
+        val entity = details.medicalRecord
+        val tags = details.tags.map { it.name }
+        val measurements = details.measurements.map {
+            Measurement(
+                value = it.value,
+                unit = it.unit
+            )
         }
-    }
-
-    override suspend fun getConsultationRecordById(id: Uuid): ConsultationRecord? {
-        val consultationRecord = medicalRecordDao.getConsultationRecordWithDetails(id) ?: return null
-        return consultationRecord.toConsultationRecord()
-    }
-
-    override suspend fun getClinicalDataRecordById(id: Uuid): ClinicalDataRecord? {
-        val clinicalDataRecord = medicalRecordDao.getClinicalDataRecordWithDetails(id) ?: return null
-        return clinicalDataRecord.toClinicalDataRecord()
-    }
-
-    override suspend fun getMeasurementRecordById(id: Uuid): MeasurementRecord? {
-        val measurementRecord = medicalRecordDao.getMeasurementRecordWithDetails(id) ?: return null
-        return measurementRecord.toMeasurementRecord()
+        val clinicalData = details.clinicalData.map {
+            ClinicalData(
+                filePath = it.filePath,
+                fileMimeType = it.fileMimeType,
+            )
+        }
+        return MedicalRecord(
+            id = entity.id,
+            date = entity.date,
+            type = entity.type,
+            description = entity.description,
+            notes = entity.notes,
+            tags = tags,
+            measurements = measurements,
+            clinicalData = clinicalData,
+            doctor = entity.doctor
+        )
     }
 
     override suspend fun insertMedicalRecord(record: MedicalRecord) {
-        val medicalRecordEntity = when (record) {
-            is ConsultationRecord -> record.toMedicalRecordEntity(record.id)
-            is ClinicalDataRecord -> record.toMedicalRecordEntity(record.id)
-            is MeasurementRecord -> record.toMedicalRecordEntity(record.id)
-            else -> throw IllegalArgumentException("Unknown record type")
-        }
-        medicalRecordDao.insert(medicalRecordEntity)
+        val entity = pl.fzar.dokumed.data.entity.MedicalRecordEntity(
+            id = record.id,
+            date = record.date,
+            type = record.type,
+            doctor = null, // doctor is not in MedicalRecord, only in ConsultationRecord
+            description = record.description,
+            notes = record.notes
+        )
+        medicalRecordDao.insert(entity)
 
-        when (record) {
-            is ConsultationRecord -> {
-                val consultationEntity = record.toConsultationRecordEntity(record.id)
-                medicalRecordDao.insert(consultationEntity)
-            }
-            is ClinicalDataRecord -> {
-                val clinicalDataEntity = record.toClinicalDataRecordEntity(record.id)
-                medicalRecordDao.insert(clinicalDataEntity)
-            }
-            is MeasurementRecord -> {
-                val measurementEntity = record.toMeasurementRecordEntity(record.id)
-                medicalRecordDao.insert(measurementEntity)
-            }
+        // Insert measurements
+        record.measurements.forEach { m ->
+            val measurementEntity = MeasurementEntity(
+                id = Uuid.random(),
+                medicalRecordId = record.id,
+                value = m.value,
+                unit = m.unit
+            )
+            medicalRecordDao.insertMeasurement(measurementEntity)
+        }
+
+        // Insert clinical data
+        record.clinicalData.forEach { c ->
+            val clinicalDataEntity = ClinicalDataEntity(
+                id = Uuid.random(),
+                medicalRecordId = record.id,
+                filePath = c.filePath,
+                fileMimeType = c.fileMimeType,
+            )
+            medicalRecordDao.insertClinicalData(clinicalDataEntity)
+        }
+
+        // Insert tags and cross-refs
+        for (tagName in record.tags) {
+            val tag = tagRepository.getTagByName(tagName) ?: TagEntity(name = tagName)
+            val tagId = if (tag.id == 0L) tagRepository.insertTag(tag) else tag.id
+            tagRepository.insertCrossRef(MedicalRecordTagCrossRef(record.id, tagId))
         }
     }
 
     override suspend fun updateMedicalRecord(record: MedicalRecord) {
-        val medicalRecordEntity = when (record) {
-            is ConsultationRecord -> record.toMedicalRecordEntity(record.id)
-            is ClinicalDataRecord -> record.toMedicalRecordEntity(record.id)
-            is MeasurementRecord -> record.toMedicalRecordEntity(record.id)
-            else -> throw IllegalArgumentException("Unknown record type")
-        }
-        medicalRecordDao.update(medicalRecordEntity)
+        val entity = MedicalRecordEntity(
+            id = record.id,
+            date = record.date,
+            type = record.type,
+            doctor = null,
+            description = record.description,
+            notes = record.notes
+        )
+        medicalRecordDao.update(entity)
 
-        when (record) {
-            is ConsultationRecord -> {
-                val consultationEntity = record.toConsultationRecordEntity(record.id)
-                medicalRecordDao.update(consultationEntity)
-            }
-            is ClinicalDataRecord -> {
-                val clinicalDataEntity = record.toClinicalDataRecordEntity(record.id)
-                medicalRecordDao.update(clinicalDataEntity)
-            }
-            is MeasurementRecord -> {
-                val measurementEntity = record.toMeasurementRecordEntity(record.id)
-                medicalRecordDao.update(measurementEntity)
-            }
+        // Remove old measurements/clinicalData and re-insert
+        medicalRecordDao.deleteMeasurementsForRecord(record.id)
+        medicalRecordDao.deleteClinicalDataForRecord(record.id)
+
+        record.measurements.forEach { m ->
+            val measurementEntity = MeasurementEntity(
+                id = Uuid.random(),
+                medicalRecordId = record.id,
+                value = m.value,
+                unit = m.unit
+            )
+            medicalRecordDao.insertMeasurement(measurementEntity)
+        }
+        record.clinicalData.forEach { c ->
+            val clinicalDataEntity = ClinicalDataEntity(
+                id = Uuid.random(),
+                medicalRecordId = record.id,
+                filePath = c.filePath,
+                fileMimeType = c.fileMimeType,
+            )
+            medicalRecordDao.insertClinicalData(clinicalDataEntity)
+        }
+
+        // Update tags
+        tagRepository.deleteCrossRefsForMedicalRecord(record.id)
+        for (tagName in record.tags) {
+            val tag = tagRepository.getTagByName(tagName) ?: TagEntity(name = tagName)
+            val tagId = if (tag.id == 0L) tagRepository.insertTag(tag) else tag.id
+            tagRepository.insertCrossRef(MedicalRecordTagCrossRef(record.id, tagId))
         }
     }
 
     override suspend fun deleteMedicalRecord(record: MedicalRecord) {
-        when (record) {
-            is ConsultationRecord -> {
-                val existingConsultationEntity = medicalRecordDao.getConsultationRecordById(record.id)
-                if (existingConsultationEntity != null) {
-                    medicalRecordDao.deleteConsultationRecord(existingConsultationEntity)
-                    medicalRecordDao.deleteMedicalRecord(record.id)
-                }
-            }
-            is ClinicalDataRecord -> {
-                val existingClinicalDataEntity = medicalRecordDao.getClinicalDataRecordById(record.id)
-                if (existingClinicalDataEntity != null) {
-                    medicalRecordDao.deleteClinicalDataRecord(existingClinicalDataEntity)
-                    medicalRecordDao.deleteMedicalRecord(record.id)
-                }
-            }
-            is MeasurementRecord -> {
-                val existingMeasurementEntity = medicalRecordDao.getMeasurementRecordById(record.id)
-                if (existingMeasurementEntity != null) {
-                    medicalRecordDao.deleteMeasurementRecord(existingMeasurementEntity)
-                    medicalRecordDao.deleteMedicalRecord(record.id)
-                }
-            }
-        }
+        // Remove tag cross-refs
+        tagRepository.deleteCrossRefsForMedicalRecord(record.id)
+        // Remove measurements and clinical data
+        medicalRecordDao.deleteMeasurementsForRecord(record.id)
+        medicalRecordDao.deleteClinicalDataForRecord(record.id)
+        // Remove the record itself
+        medicalRecordDao.deleteMedicalRecord(record.id)
     }
 
     override suspend fun deleteAssociatedFile(filePath: String?): Boolean {

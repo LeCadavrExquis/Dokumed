@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 import kotlin.uuid.Uuid
 
 @Entity(
-    tableName = "clinical_data",
+    tableName = "measurements",
     foreignKeys = [ForeignKey(
         entity = MedicalRecordEntity::class,
         parentColumns = ["id"],
@@ -16,10 +16,10 @@ import kotlin.uuid.Uuid
     )],
     indices = [Index("medicalRecordId")]
 )
-data class ClinicalDataEntity(
+data class MeasurementEntity(
     @PrimaryKey
     val id: Uuid,
     val medicalRecordId: Uuid,
-    val filePath: String?,
-    val fileMimeType: String?,
+    val value: Double?,
+    val unit: String?
 )

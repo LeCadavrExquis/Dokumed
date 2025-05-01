@@ -6,18 +6,16 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import pl.fzar.dokumed.data.dao.MedicalRecordDao
 import pl.fzar.dokumed.data.dao.TagDao
-import pl.fzar.dokumed.data.entity.ClinicalDataRecordEntity
-import pl.fzar.dokumed.data.entity.ConsultationRecordEntity
-import pl.fzar.dokumed.data.entity.MeasurementRecordEntity
+import pl.fzar.dokumed.data.entity.ClinicalDataEntity
+import pl.fzar.dokumed.data.entity.MeasurementEntity
 import pl.fzar.dokumed.data.entity.MedicalRecordEntity
 import pl.fzar.dokumed.data.entity.MedicalRecordTagCrossRef
 import pl.fzar.dokumed.data.entity.TagEntity
 
 @Database(entities = [
     MedicalRecordEntity::class,
-    ConsultationRecordEntity::class,
-    ClinicalDataRecordEntity::class,
-    MeasurementRecordEntity::class,
+    ClinicalDataEntity::class,
+    MeasurementEntity::class,
     TagEntity::class,
     MedicalRecordTagCrossRef::class,
 ], version = 1, exportSchema = false)

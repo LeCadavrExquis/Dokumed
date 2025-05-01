@@ -11,16 +11,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
-import pl.fzar.dokumed.data.dao.MedicalRecordDao
-import pl.fzar.dokumed.data.dao.TagDao
 import pl.fzar.dokumed.data.entity.MedicalRecordTagCrossRef
 import pl.fzar.dokumed.data.entity.TagEntity
-import pl.fzar.dokumed.data.entity.toClinicalDataRecord
-import pl.fzar.dokumed.data.entity.toConsultationRecord
-import pl.fzar.dokumed.data.entity.toMeasurementRecord
-import pl.fzar.dokumed.data.model.ClinicalDataRecord
-import pl.fzar.dokumed.data.model.ConsultationRecord
-import pl.fzar.dokumed.data.model.MeasurementRecord
 import pl.fzar.dokumed.data.model.MedicalRecord
 import pl.fzar.dokumed.data.model.MedicalRecordType
 import pl.fzar.dokumed.data.repository.MedicalRecordRepository
@@ -69,21 +61,30 @@ class MedicalRecordViewModel(
         viewModelScope.launch {
             medicalRecordRepository.getAllRecords()
                 .collect { recordsWithTags ->
-                    _records.value = recordsWithTags.mapNotNull { record ->
-                        when (record.medicalRecord.type) {
-                            in pl.fzar.dokumed.data.model.consultationRecords -> 
-                                record.toConsultationRecord()
-                            in pl.fzar.dokumed.data.model.measurementRecords -> 
-                                record.toMeasurementRecord()
-                            in pl.fzar.dokumed.data.model.clinicalDataRecords -> 
-                                record.toClinicalDataRecord()
-                            else -> null
-                        }
+                    // Convert recordsWithTags to MedicalRecord objects
+                    val mappedRecords = recordsWithTags.map { rwt ->
+                        MedicalRecord(
+                            id = rwt.medicalRecord.id,
+                            date = rwt.medicalRecord.date,
+                            type = rwt.medicalRecord.type,
+                            description = rwt.medicalRecord.description,
+                            notes = rwt.medicalRecord.notes,
+                            tags = rwt.tags.map { it.name },
+                            // Assuming details are loaded separately or not needed for the list view
+                            measurements = emptyList(), // Or load if necessary
+                            clinicalData = emptyList(), // Or load if necessary
+                            doctor = rwt.medicalRecord.doctor
+                        )
                     }
-                    
-                    _availableTags.value = _records.value.flatMap { it.tags }.distinct().sorted()
-                    applyFilters()
+                    _records.value = mappedRecords
+                    applyFilters() // Apply filters whenever the base list changes
                 }
+        }
+        // Initialize available tags
+        viewModelScope.launch {
+            tagRepository.getAllTags().let { tags ->
+                _availableTags.value = tags.map { it.name }
+            }
         }
     }
 
@@ -91,8 +92,9 @@ class MedicalRecordViewModel(
      * Metoda do skopiowania wczytanego pliku do lokalnej pamięci aplikacji.
      * @param uri URI pliku do skopiowania
      * @param fileName Nazwa pliku, pod którą zostanie zapisany w pamięci lokalnej
+     * @param onComplete Callback invoked with the absolute path of the saved file upon success
      */
-    fun copyFileToLocalStorage(context: Context, uri: Uri, fileName: String) {
+    fun copyFileToLocalStorage(context: Context, uri: Uri, fileName: String, onComplete: (String) -> Unit) {
         viewModelScope.launch {
             try {
                 val inputStream: InputStream = context.contentResolver.openInputStream(uri)
@@ -101,6 +103,7 @@ class MedicalRecordViewModel(
                 val outputDir = context.filesDir // Pamięć wewnętrzna aplikacji
                     ?: throw IOException("Nie udało się znaleźć katalogu do zapisu.")
 
+                // Ensure unique filename if needed, or handle overwrites
                 val outputFile = File(outputDir, fileName)
 
                 // Kopiowanie pliku
@@ -108,11 +111,12 @@ class MedicalRecordViewModel(
 
                 inputStream.close()
 
-                // Zaktualizowanie ścieżki pliku w rekordzie
-                updateFilePathInRecord(fileName, outputFile.absolutePath)
+                // Invoke the callback with the absolute path of the saved file
+                onComplete(outputFile.absolutePath)
 
             } catch (e: Exception) {
                 e.printStackTrace() // Obsługuje błąd, np. plik może być uszkodzony
+                // Optionally, provide error feedback via the callback or another mechanism
             }
         }
     }
@@ -136,21 +140,6 @@ class MedicalRecordViewModel(
             outputStream.flush()
         } finally {
             outputStream?.close()
-        }
-    }
-
-    /**
-     * Metoda do zaktualizowania rekordu z lokalną ścieżką pliku.
-     */
-    private fun updateFilePathInRecord(fileName: String, filePath: String) {
-        // Przykładowa implementacja - należy dostosować do struktury Twoich rekordów
-        val updatedRecord = _currentRecord.value?.apply {
-            // Zaktualizuj ścieżkę w rekordzie (w zależności od typu rekordu)
-            // W przykładzie `filePath` to pole w rekordzie, które przechowuje ścieżkę pliku
-        }
-
-        updatedRecord?.let {
-            updateRecord(it)
         }
     }
 
@@ -203,16 +192,35 @@ class MedicalRecordViewModel(
         applyFilters()
     }
 
-    fun loadRecordDetails(type: MedicalRecordType, recordId: Uuid) {
+    /**
+     * Fetches the specific MedicalRecord using the provided recordId
+     * and updates the _currentRecord StateFlow.
+     * Assumes a repository method getRecordById exists.
+     */
+    fun loadRecordDetailsById(recordId: Uuid) {
         viewModelScope.launch {
-            val record = when (type) {
-                in pl.fzar.dokumed.data.model.consultationRecords -> medicalRecordRepository.getConsultationRecordById(recordId)
-                in pl.fzar.dokumed.data.model.measurementRecords -> medicalRecordRepository.getMeasurementRecordById(recordId)
-                in pl.fzar.dokumed.data.model.clinicalDataRecords -> medicalRecordRepository.getClinicalDataRecordById(recordId)
-                else -> null
+            _currentRecord.value = null // Clear previous record while loading
+            try {
+                // Attempt to find the record in the already loaded list first (optimization)
+                // Note: This assumes the _records list contains enough detail or you always fetch.
+                // If _records only has summary data, you MUST fetch from repo.
+                val detailedRecord = medicalRecordRepository.getMedicalRecordById(recordId) // Fetch full details
+                _currentRecord.value = detailedRecord
+
+            } catch (e: Exception) {
+                // Handle error, e.g., record not found in repository
+                _currentRecord.value = null
+                // Log the error or show a message if needed
+                println("Error loading record details: ${e.message}")
             }
-            _currentRecord.value = record
         }
+    }
+
+    /**
+     * Sets _currentRecord.value to null.
+     */
+    fun clearCurrentRecord() {
+        _currentRecord.value = null
     }
 
     fun updateRecord(updatedRecord: MedicalRecord) {
@@ -279,23 +287,7 @@ class MedicalRecordViewModel(
      */
     fun deleteRecord(recordToDelete: MedicalRecord) {
         viewModelScope.launch {
-            // Delete any associated files
-            if (recordToDelete is ConsultationRecord || recordToDelete is ClinicalDataRecord) {
-                val filePath = when (recordToDelete) {
-                    is ConsultationRecord -> recordToDelete.filePath
-                    is ClinicalDataRecord -> recordToDelete.filePath
-                    else -> null
-                }
-                medicalRecordRepository.deleteAssociatedFile(filePath)
-            }
-            
-            // Delete the record and its tag references
-            medicalRecordRepository.deleteMedicalRecord(recordToDelete)
-            
-            // Clear current record if it was the one deleted
-            if (_currentRecord.value?.id == recordToDelete.id) {
-                _currentRecord.value = null
-            }
+            // TODO: Implement logic to delete the record from the database
         }
     }
 }

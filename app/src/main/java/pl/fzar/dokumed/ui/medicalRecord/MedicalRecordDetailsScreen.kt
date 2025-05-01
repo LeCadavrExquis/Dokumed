@@ -2,6 +2,7 @@ package pl.fzar.dokumed.ui.medicalRecord
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
@@ -22,16 +24,19 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.core.net.toUri
-import pl.fzar.dokumed.data.model.ClinicalDataRecord
-import pl.fzar.dokumed.data.model.ConsultationRecord
-import pl.fzar.dokumed.data.model.MeasurementRecord
+import pl.fzar.dokumed.R
 import pl.fzar.dokumed.data.model.MedicalRecord
+import pl.fzar.dokumed.data.model.clinicalDataRecords
+import pl.fzar.dokumed.data.model.consultationRecords
 import pl.fzar.dokumed.data.model.dummyRecords
 import pl.fzar.dokumed.data.model.getLocalizedString
 import kotlin.uuid.Uuid
@@ -96,6 +101,8 @@ fun MedicalRecordDetailsScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
+
+                // Display Tags
                 if (medicalRecord.tags.isNotEmpty()) {
                     Text(
                         text = "Tagi:",
@@ -115,46 +122,40 @@ fun MedicalRecordDetailsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                // Wyświetlanie szczegółów w zależności od typu rekordu
-                when {
-                    medicalRecord is ConsultationRecord -> {
-                        Text(
-                            text = "Szczegóły Konsultacji:",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text("Lekarz: ${medicalRecord.doctor ?: "Brak"}")
-                        medicalRecord.filePath?.let {
-                            OpenFileButton(filePath = it, mimeType = medicalRecord.fileMimeType!!, context = context)
+                // Display Clinical Data (Attached Files) if available and relevant type
+                if ((medicalRecord.type in consultationRecords || medicalRecord.type in clinicalDataRecords) && medicalRecord.clinicalData.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+                    Text("Załączone pliki", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+                    Column { // Use Column for the list of files
+                        medicalRecord.clinicalData.forEach { fileData ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { // Make the row clickable
+                                        if (fileData.filePath != null && fileData.fileMimeType != null) {
+                                            openFileIntent(context, fileData.filePath, fileData.fileMimeType)
+                                        }
+                                        // TODO: Add error handling if path or mime type is null
+                                    }
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // You might want an icon based on fileData.fileMimeType here later
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_file), // Generic file icon
+                                    contentDescription = "Plik",
+                                    modifier = Modifier.size(24.dp).padding(end = 8.dp)
+                                )
+                                Text(
+                                    text = fileData.fileName ?: fileData.filePath?.substringAfterLast('/') ?: "Nieznany plik",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                // Optional: Add an onClick to open the file later
+                            }
                         }
                     }
-                    medicalRecord is ClinicalDataRecord -> {
-                        Text(
-                            text = "Szczegóły Badania Klinicznego:",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text("Nazwa testu: ${medicalRecord.testName}")
-                        medicalRecord.filePath?.let {
-                            OpenFileButton(filePath = it, mimeType = medicalRecord.fileMimeType!!, context = context)
-                        }
-                    }
-                    medicalRecord is MeasurementRecord -> {
-                        Text(
-                            text = "Szczegóły Pomiaru:",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text("Nazwa testu: ${medicalRecord.testName}")
-                        if (medicalRecord.value != null) {
-                            Text("Wartość: ${medicalRecord.value} ${medicalRecord.unit ?: ""}")
-                        } else {
-                            Text("Wartość: Brak")
-                        }
-                    }
-                    else -> {
-                        Text("Brak dodatkowych szczegółów dla tego typu rekordu.")
-                    }
+                    Spacer(Modifier.height(16.dp)) // Add space after the file list
                 }
             } else {
                 Text("Nie można załadować szczegółów rekordu.")
@@ -182,7 +183,11 @@ fun OpenFileButton(filePath: String, mimeType: String, context: Context) {
 }
 
 fun openFileIntent(context: Context, filePath: String, mimeType: String) {
-    val uri = "file://$filePath".toUri()
+    // val uri = "file://$filePath".toUri() // Old way - causes FileUriExposedException
+    val file = java.io.File(filePath)
+    val authority = "${context.packageName}.provider" // Matches authority in Manifest
+    val uri = FileProvider.getUriForFile(context, authority, file)
+
     val intent = Intent(Intent.ACTION_VIEW)
     intent.setDataAndType(uri, mimeType)
     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
