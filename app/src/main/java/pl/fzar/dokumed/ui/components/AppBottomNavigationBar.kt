@@ -14,9 +14,9 @@ import androidx.annotation.DrawableRes
 
 // Define sealed class for Bottom Navigation Items using DrawableRes
 sealed class BottomNavItem(val route: String, val labelResId: Int, @DrawableRes val iconResId: Int) {
-    object Records : BottomNavItem("records", R.string.bottom_nav_records, R.drawable.filter_list) // Use filter_list for records
-    object Statistics : BottomNavItem("statistics", R.string.bottom_nav_statistics, R.drawable.show_chart) // Use show_chart for statistics
-    object Export : BottomNavItem("export", R.string.bottom_nav_export, R.drawable.export_records) // Use export_records for export
+    object Records : BottomNavItem("records", R.string.bottom_nav_records, R.drawable.ic_filter_list) // Use filter_list for records
+    object Statistics : BottomNavItem("statistics", R.string.bottom_nav_statistics, R.drawable.ic_show_chart) // Use show_chart for statistics
+    object Export : BottomNavItem("export", R.string.bottom_nav_export, R.drawable.ic_export_records) // Use export_records for export
 }
 
 val bottomNavItems = listOf(

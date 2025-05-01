@@ -13,6 +13,8 @@ import pl.fzar.dokumed.data.repository.TagRepositoryImpl
 import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordViewModel
 import pl.fzar.dokumed.ui.statistics.StatisticsViewModel
 import pl.fzar.dokumed.ui.export.ExportViewModel
+import pl.fzar.dokumed.util.FileUtil
+import kotlin.math.sin
 
 class DokumedApp : Application() {
     override fun onCreate() {
@@ -37,9 +39,11 @@ val appModule = module {
     single<TagRepository> {
         TagRepositoryImpl(get())
     }
-    
+
+    single { FileUtil }
+
     // ViewModels
-    single { MedicalRecordViewModel(get<MedicalRecordRepository>(), get<TagRepository>()) }
+    single { MedicalRecordViewModel(get<MedicalRecordRepository>(), get<TagRepository>(), get()) }
     single { StatisticsViewModel(get<MedicalRecordRepository>()) }
     single { ExportViewModel(get(), get<MedicalRecordRepository>()) }
 }

@@ -18,7 +18,7 @@ import pl.fzar.dokumed.data.entity.TagEntity
     MeasurementEntity::class,
     TagEntity::class,
     MedicalRecordTagCrossRef::class,
-], version = 1, exportSchema = false)
+], version = 2, exportSchema = false)
 @TypeConverters(
     MedicalRecordTypeConverter::class,
     LocalDateConverter::class,

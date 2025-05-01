@@ -22,6 +22,4 @@ data class ClinicalData(
     val filePath: String? = null,
     val fileMimeType: String? = null,
     val fileName: String? = null, // Added field for original filename
-    val resultText: String? = null, // e.g., "Positive", "Normal"
-    val notes: String? = null
 )

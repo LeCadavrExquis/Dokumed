@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.Flow
 import pl.fzar.dokumed.data.entity.MedicalRecordEntity
 import pl.fzar.dokumed.data.entity.MedicalRecordWithDetails
 import pl.fzar.dokumed.data.entity.MedicalRecordWithTags
+import pl.fzar.dokumed.data.entity.ClinicalDataEntity
+import pl.fzar.dokumed.data.entity.MeasurementEntity
 import kotlin.uuid.Uuid
 
 @Dao
@@ -38,15 +40,25 @@ interface MedicalRecordDao {
     @Query("SELECT * FROM medical_records WHERE id = :id")
     suspend fun getMedicalRecordWithDetails(id: Uuid): MedicalRecordWithDetails?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertMeasurement(measurement: pl.fzar.dokumed.data.entity.MeasurementEntity)
+    @Transaction
+    @Query("SELECT * FROM medical_records WHERE id IN (:recordIds)")
+    suspend fun getMedicalRecordsWithDetails(recordIds: Set<Uuid>): List<MedicalRecordWithDetails>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertClinicalData(clinicalData: pl.fzar.dokumed.data.entity.ClinicalDataEntity)
+    suspend fun insertMeasurement(measurement: MeasurementEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertClinicalData(clinicalData: ClinicalDataEntity)
 
     @Query("DELETE FROM measurements WHERE medicalRecordId = :medicalRecordId")
     suspend fun deleteMeasurementsForRecord(medicalRecordId: Uuid)
 
     @Query("DELETE FROM clinical_data WHERE medicalRecordId = :medicalRecordId")
     suspend fun deleteClinicalDataForRecord(medicalRecordId: Uuid)
+
+    @Query("SELECT * FROM measurements WHERE medicalRecordId IN (:recordIds)")
+    suspend fun getMeasurementsForRecords(recordIds: Set<Uuid>): List<MeasurementEntity>
+
+    @Query("SELECT * FROM clinical_data WHERE medicalRecordId IN (:recordIds)")
+    suspend fun getClinicalDataForRecords(recordIds: Set<Uuid>): List<ClinicalDataEntity>
 }

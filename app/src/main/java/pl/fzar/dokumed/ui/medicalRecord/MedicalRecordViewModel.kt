@@ -2,21 +2,31 @@ package pl.fzar.dokumed.ui.medicalRecord
 
 import android.content.Context
 import android.net.Uri
+import android.webkit.MimeTypeMap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import pl.fzar.dokumed.data.entity.MedicalRecordTagCrossRef
 import pl.fzar.dokumed.data.entity.TagEntity
+import pl.fzar.dokumed.data.model.ClinicalData
+import pl.fzar.dokumed.data.model.Measurement
 import pl.fzar.dokumed.data.model.MedicalRecord
 import pl.fzar.dokumed.data.model.MedicalRecordType
 import pl.fzar.dokumed.data.repository.MedicalRecordRepository
 import pl.fzar.dokumed.data.repository.TagRepository
+import pl.fzar.dokumed.util.FileUtil
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -27,10 +37,14 @@ import kotlin.uuid.Uuid
 class MedicalRecordViewModel(
     private val medicalRecordRepository: MedicalRecordRepository,
     private val tagRepository: TagRepository,
+    private val fileUtil: FileUtil,
 ) : ViewModel() {
 
     private val _records = MutableStateFlow<List<MedicalRecord>>(emptyList())
     val records: StateFlow<List<MedicalRecord>> = _records
+    
+    // For accessing records regardless of filters
+    val allRecords: StateFlow<List<MedicalRecord>> = _records
 
     private val _currentRecord = MutableStateFlow<MedicalRecord?>(null)
     val currentRecord: StateFlow<MedicalRecord?> = _currentRecord
@@ -44,17 +58,36 @@ class MedicalRecordViewModel(
     private val _selectedTags = MutableStateFlow<Set<String>>(emptySet())
     val selectedTags: StateFlow<Set<String>> = _selectedTags
 
-    private val _dateFrom = MutableStateFlow<LocalDate?>(null)
-    val dateFrom: StateFlow<LocalDate?> = _dateFrom
+    private val _dateRangeStart = MutableStateFlow<LocalDate?>(null)
+    val dateRangeStart: StateFlow<LocalDate?> = _dateRangeStart
 
-    private val _dateTo = MutableStateFlow<LocalDate?>(null)
-    val dateTo: StateFlow<LocalDate?> = _dateTo
+    private val _dateRangeEnd = MutableStateFlow<LocalDate?>(null)
+    val dateRangeEnd: StateFlow<LocalDate?> = _dateRangeEnd
 
     val filteredCount: StateFlow<Int> = filteredRecords.map { it.size }
         .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
     private val _availableTags = MutableStateFlow<List<String>>(emptyList())
-    val availableTags: StateFlow<List<String>> = _availableTags
+    val allTags: StateFlow<List<String>> = _availableTags
+    
+    // New state for edit screen
+    private val _recordState = MutableStateFlow<RecordOperationState>(RecordOperationState.Idle)
+    val recordState: StateFlow<RecordOperationState> = _recordState.asStateFlow()
+    
+    // State for measurements in edit screen
+    private val _measurementsState = MutableStateFlow<List<Measurement>>(emptyList())
+    val measurementsState: StateFlow<List<Measurement>> = _measurementsState
+    
+    // State for clinical data in edit screen
+    private val _clinicalDataState = MutableStateFlow<List<ClinicalData>>(emptyList())
+    val clinicalDataState: StateFlow<List<ClinicalData>> = _clinicalDataState
+    
+    // State for clinical data marked for deletion
+    private val _clinicalDataForDeletion = MutableStateFlow<Set<Uuid>>(emptySet())
+
+    // State for handling attachments received via Intent
+    private val _pendingAttachment = MutableStateFlow<ClinicalData?>(null)
+    val pendingAttachment: StateFlow<ClinicalData?> = _pendingAttachment.asStateFlow()
 
     init {
         // Initialize the flow of records
@@ -153,8 +186,8 @@ class MedicalRecordViewModel(
         val allRecords = _records.value
         val types = _selectedTypes.value
         val tags = _selectedTags.value
-        val from = _dateFrom.value
-        val to = _dateTo.value
+        val from = _dateRangeStart.value
+        val to = _dateRangeEnd.value
 
         _filteredRecords.value = allRecords.filter { record ->
             (types.isEmpty() || record.type in types) &&
@@ -175,20 +208,20 @@ class MedicalRecordViewModel(
     }
 
     fun updateDateFrom(date: LocalDate?) {
-        _dateFrom.value = date
+        _dateRangeStart.value = date
         applyFilters()
     }
 
     fun updateDateTo(date: LocalDate?) {
-        _dateTo.value = date
+        _dateRangeEnd.value = date
         applyFilters()
     }
 
     fun resetFilters() {
         _selectedTypes.value = emptySet()
         _selectedTags.value = emptySet()
-        _dateFrom.value = null
-        _dateTo.value = null
+        _dateRangeStart.value = null
+        _dateRangeEnd.value = null
         applyFilters()
     }
 
@@ -225,58 +258,49 @@ class MedicalRecordViewModel(
 
     fun updateRecord(updatedRecord: MedicalRecord) {
         viewModelScope.launch {
-            medicalRecordRepository.updateMedicalRecord(updatedRecord)
-            
-            // Update tags
-            updatedRecord.tags.forEach { tagName ->
-                val tag = tagRepository.getTagByName(tagName) ?: TagEntity(id = 0, name = tagName)
-                if (tag.id == 0L) {
-                    val tagId = tagRepository.insertTag(tag)
-                    tagRepository.insertCrossRef(
-                        MedicalRecordTagCrossRef(
-                            medicalRecordId = updatedRecord.id,
-                            tagId = tagId
-                        )
-                    )
-                } else {
-                    tagRepository.insertCrossRef(
-                        MedicalRecordTagCrossRef(
-                            medicalRecordId = updatedRecord.id,
-                            tagId = tag.id
-                        )
-                    )
-                }
+            _recordState.value = RecordOperationState.Saving
+            try {
+                // Use the comprehensive update method that handles all record details
+                medicalRecordRepository.updateMedicalRecordWithDetails(
+                    updatedRecord,
+                    _measurementsState.value, 
+                    _clinicalDataState.value,
+                    _clinicalDataForDeletion.value
+                )
+                
+                // Update UI state
+                _currentRecord.value = updatedRecord
+                _clinicalDataForDeletion.value = emptySet()
+                _recordState.value = RecordOperationState.Success
+                
+                // Log success
+                println("Record successfully updated with ID: ${updatedRecord.id}")
+            } catch (e: Exception) {
+                // Log error and update state
+                println("Error updating record: ${e.message}")
+                _recordState.value = RecordOperationState.Error("Failed to update record: ${e.message}")
             }
-            
-            _currentRecord.value = updatedRecord
         }
     }
 
     fun addNewRecord(newRecord: MedicalRecord) {
         viewModelScope.launch {
-            medicalRecordRepository.insertMedicalRecord(newRecord)
-
-            // DAO logic removed, repository handles all persistence
-            
-            // Insert tags
-            newRecord.tags.forEach { tagName ->
-                val tag = tagRepository.getTagByName(tagName) ?: TagEntity(id = 0, name = tagName)
-                if (tag.id == 0L) {
-                    val tagId = tagRepository.insertTag(tag)
-                    tagRepository.insertCrossRef(
-                        MedicalRecordTagCrossRef(
-                            medicalRecordId = newRecord.id,
-                            tagId = tagId
-                        )
-                    )
-                } else {
-                    tagRepository.insertCrossRef(
-                        MedicalRecordTagCrossRef(
-                            medicalRecordId = newRecord.id,
-                            tagId = tag.id
-                        )
-                    )
-                }
+            _recordState.value = RecordOperationState.Saving
+            try {
+                // Use the preferred method that handles measurements and clinical data
+                medicalRecordRepository.insertMedicalRecordWithDetails(newRecord, _measurementsState.value, _clinicalDataState.value)
+                
+                // Clear states after successful save
+                _currentRecord.value = newRecord
+                _clinicalDataForDeletion.value = emptySet()
+                _recordState.value = RecordOperationState.Success
+                
+                // Log success
+                println("Record successfully saved with ID: ${newRecord.id}")
+            } catch (e: Exception) {
+                // Log error and update state
+                println("Error saving record: ${e.message}")
+                _recordState.value = RecordOperationState.Error("Failed to save record: ${e.message}")
             }
         }
     }
@@ -290,4 +314,108 @@ class MedicalRecordViewModel(
             // TODO: Implement logic to delete the record from the database
         }
     }
+
+    /**
+     * Sets a file attachment that should be added to a new record when the
+     * edit screen is opened next.
+     */
+    fun setPendingAttachment(clinicalData: ClinicalData) {
+        _pendingAttachment.value = clinicalData
+    }
+
+    /**
+     * Consumes the pending attachment state, typically after it has been added
+     * to the UI state of the edit screen.
+     */
+    fun consumePendingAttachment() {
+        _pendingAttachment.value = null
+    }
+
+    // Function to copy file from external URI and prepare ClinicalData
+    // Returns the created ClinicalData object or null on failure
+    suspend fun copyFileToLocalStorage(context: Context, uri: Uri, mimeType: String?): ClinicalData? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val fileName = fileUtil.getFileName(context, uri)
+                val fileExtension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType) ?: uri.path?.substringAfterLast('.', "") ?: ""
+                val finalFileName = if (fileName.contains('.')) fileName else "$fileName.$fileExtension"
+
+                val destinationPath = fileUtil.copyFileToInternalStorage(context, uri, finalFileName)
+                if (destinationPath != null) {
+                    ClinicalData(
+                        filePath = destinationPath,
+                        fileMimeType = mimeType ?: "application/octet-stream",
+                        fileName = finalFileName,
+                    )
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
+
+    fun loadMedicalRecord(recordId: Uuid?) {
+        viewModelScope.launch {
+            _recordState.value = RecordOperationState.Loading
+            try {
+                if (recordId == null) {
+                    // For new record, just clear states
+                    _currentRecord.value = null
+                    _measurementsState.value = emptyList()
+                    _clinicalDataState.value = emptyList()
+                    _clinicalDataForDeletion.value = emptySet()
+                    _recordState.value = RecordOperationState.Idle
+                } else {
+                    // For existing record, load all data
+                    val record = medicalRecordRepository.getMedicalRecordById(recordId)
+                    _currentRecord.value = record
+                    
+                    if (record != null) {
+                        // Load measurements
+                        val measurements = medicalRecordRepository.getMeasurementsForRecord(recordId)
+                        _measurementsState.value = measurements
+                        
+                        // Load clinical data
+                        val clinicalData = medicalRecordRepository.getClinicalDataForRecord(recordId)
+                        _clinicalDataState.value = clinicalData
+                        
+                        _recordState.value = RecordOperationState.Idle
+                    } else {
+                        _recordState.value = RecordOperationState.Error("Record not found")
+                    }
+                }
+            } catch (e: Exception) {
+                _recordState.value = RecordOperationState.Error("Failed to load record: ${e.message}")
+            }
+        }
+    }
+    
+    fun markClinicalDataForDeletion(clinicalDataId: Uuid) {
+        _clinicalDataForDeletion.value = _clinicalDataForDeletion.value + clinicalDataId
+        // Also remove from current state to update UI
+        _clinicalDataState.value = _clinicalDataState.value.filter { it.id != clinicalDataId }
+    }
+    
+    fun resetSaveState() {
+        _recordState.value = RecordOperationState.Idle
+    }
+
+    fun updateDateRange(start: LocalDate?, end: LocalDate?) {
+        _dateRangeStart.value = start
+        _dateRangeEnd.value = end
+        applyFilters()
+    }
 }
+
+// Define operation states for record management
+sealed class RecordOperationState {
+    object Idle : RecordOperationState()
+    object Loading : RecordOperationState()
+    object Saving : RecordOperationState()
+    object Success : RecordOperationState()
+    data class Error(val message: String) : RecordOperationState()
+}
+

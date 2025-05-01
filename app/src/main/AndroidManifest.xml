@@ -32,6 +32,19 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Intent filter to handle viewing PDF and Image files -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Handle content URIs (common for file sharing) -->
+                <data android:scheme="content" />
+                <!-- Handle file URIs (less common but possible) -->
+                <data android:scheme="file" />
+                <!-- Specify MIME types -->
+                <data android:mimeType="application/pdf" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
         </activity>
     </application>
 

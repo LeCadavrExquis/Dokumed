@@ -9,6 +9,7 @@ The Dokumed app is an Android application for managing medical records. It allow
 - Tag-based organization
 - Statistics and insights
 - Data export and backup
+  - Export selected medical records, associated measurements (grouped by description into separate CSVs), and attached files into a single ZIP archive.
 
 ## Architecture
 The app follows the MVVM (Model-View-ViewModel) architecture pattern with repository abstractions:
@@ -42,6 +43,10 @@ The app follows the MVVM (Model-View-ViewModel) architecture pattern with reposi
 
 ### ViewModels
 - `MedicalRecordViewModel`: Manages medical record CRUD operations
+  - Uses `saveMedicalRecord()` as the primary method for creating/updating records
+  - Properly synchronizes measurements and clinical data from records to its internal state
+  - Handles clinical data deletion tracking
+  - Maintains operation state (Idle, Loading, Saving, Success, Error)
 - `StatisticsViewModel`: Handles statistical analysis of records
 - `ExportViewModel`: Manages export functionality
 
@@ -57,6 +62,9 @@ The app follows the MVVM (Model-View-ViewModel) architecture pattern with reposi
 - **Usability**: Intuitive UI for easy record management
 - **Reliability**: Consistent data storage and retrieval
 
+## Known Issues and Fixes
+- **Record Saving Issue**: Fixed an issue where records weren't being properly saved to the database. The problem was related to the synchronization between the UI state and the ViewModel's internal state. Now records are saved using the `saveMedicalRecord()` method which correctly handles all related data (measurements, clinical data, tags).
+
 ## Medical Record Management
 - View a list of medical records.
 - View details of a specific medical record, including attached files.
@@ -66,4 +74,13 @@ The app follows the MVVM (Model-View-ViewModel) architecture pattern with reposi
 - Edit existing medical records.
 - Delete medical records.
 - Attach multiple files (e.g., PDFs, images) to relevant record types (Consultation, Lab Test, Imaging, Procedure).
+- **Open files (e.g., PDF, images) from external apps (like email clients) directly into Dokumed, automatically navigating to the 'New Record' screen with the file pre-attached.**
 - Add tags to records for easier categorization and searching.
+
+## File Handling
+- Attach files (PDF, images) to records from device storage.
+- View attached files within the app.
+- Open files (PDF, images) from external apps (e.g., email attachments) directly into the "New Record" screen with the file pre-attached.
+
+## Data Visualization
+- View trends and charts for specific measurement types over time (placeholder/future feature).

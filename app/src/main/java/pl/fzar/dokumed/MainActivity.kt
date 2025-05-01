@@ -1,8 +1,12 @@
 package pl.fzar.dokumed
 
 import MedicalRecordsScreen
+import android.content.Intent
+import android.content.Context
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,202 +16,227 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.launch
+import pl.fzar.dokumed.data.model.ClinicalData // Import ClinicalData
+import pl.fzar.dokumed.ui.export.ExportScreen
+import pl.fzar.dokumed.ui.export.ExportViewModel
 import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordDetailsScreen
 import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordEditScreen
+import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordViewModel
 import pl.fzar.dokumed.ui.statistics.StatisticsScreen
 import pl.fzar.dokumed.ui.statistics.StatisticsViewModel
 import pl.fzar.dokumed.ui.theme.DokumedTheme
 import pl.fzar.dokumed.ui.components.AppBottomNavigationBar
-import pl.fzar.dokumed.ui.export.ExportScreen
-import pl.fzar.dokumed.ui.export.ExportViewModel
-import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordViewModel
+import pl.fzar.dokumed.ui.components.BottomNavItem
 import kotlin.uuid.Uuid
+import org.koin.androidx.compose.koinViewModel
+import org.koin.core.context.GlobalContext
 
 class MainActivity : ComponentActivity() {
+    // State to trigger navigation after intent processing
+    private var pendingNavigation by mutableStateOf<String?>(null)
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Handle the intent that started the activity
+        handleIntent(intent)
+
         setContent {
-            val navController = rememberNavController()
-            val medVM: MedicalRecordViewModel = org.koin.androidx.compose.koinViewModel()
-            val statsVM: StatisticsViewModel = org.koin.androidx.compose.koinViewModel()
-            val exportVM: ExportViewModel = org.koin.androidx.compose.koinViewModel()
+            // Get the ViewModel using Koin
+            val medicalRecordViewModel: MedicalRecordViewModel = koinViewModel()
+
             DokumedTheme {
+                val navController = rememberNavController()
+                
+                // Main layout with navigation
                 Scaffold(
                     bottomBar = {
-                        // Only show bottom bar on main screens, not on detail or edit screens
-                        val currentRoute =
-                            navController.currentBackStackEntryAsState().value?.destination?.route
-                        val mainRoutes = listOf("records", "statistics", "export")
-
-                        if (currentRoute in mainRoutes) {
-                            AppBottomNavigationBar(navController = navController)
-                        }
+                        AppBottomNavigationBar(navController = navController)
                     }
                 ) { innerPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = "records",
-                        modifier = Modifier.padding(
-                            PaddingValues(
-                                bottom = innerPadding.calculateBottomPadding()
-                            )
-                        )
+                        startDestination = BottomNavItem.Records.route,
+                        modifier = Modifier.padding(innerPadding)
                     ) {
-
-                        composable("records") {
-                            val records by medVM.filteredRecords.collectAsState()
-
-                            val selectedTypes by medVM.selectedTypes.collectAsState()
-                            val selectedTags by medVM.selectedTags.collectAsState()
-                            val dateFrom by medVM.dateFrom.collectAsState()
-                            val dateTo by medVM.dateTo.collectAsState()
-                            val allTags by medVM.availableTags.collectAsState()
+                        composable(BottomNavItem.Records.route) {
                             MedicalRecordsScreen(
-                                records = records,
-                                allTags = allTags,
+                                records = medicalRecordViewModel.filteredRecords.collectAsState().value,
+                                allTags = medicalRecordViewModel.allTags.collectAsState().value,
                                 onRecordClick = { record ->
-                                    navController.navigate("record_details/${record.id}")
+                                    navController.navigate("record_detail/${record.id}")
                                 },
-                                onAddRecordClick = { navController.navigate("record_new") },
-                                selectedTypes = selectedTypes,
-                                onTypesChange = { medVM.updateSelectedTypes(it) },
-                                dateFrom = dateFrom,
-                                dateTo = dateTo,
-                                onDateRangeChange = { from, to ->
-                                    medVM.updateDateFrom(from); medVM.updateDateTo(
-                                    to
-                                )
+                                onAddRecordClick = {
+                                    navController.navigate("record_new")
                                 },
-                                selectedTags = selectedTags,
-                                onTagsChange = { medVM.updateSelectedTags(it) }
+                                selectedTypes = medicalRecordViewModel.selectedTypes.collectAsState().value,
+                                onTypesChange = { types ->
+                                    medicalRecordViewModel.updateSelectedTypes(types)
+                                },
+                                dateFrom = medicalRecordViewModel.dateRangeStart.collectAsState().value,
+                                dateTo = medicalRecordViewModel.dateRangeEnd.collectAsState().value,
+                                onDateRangeChange = { start, end ->
+                                    medicalRecordViewModel.updateDateRange(start, end)
+                                },
+                                selectedTags = medicalRecordViewModel.selectedTags.collectAsState().value,
+                                onTagsChange = { tags ->
+                                    medicalRecordViewModel.updateSelectedTags(tags)
+                                }
                             )
                         }
-                        composable("record_details/{recordId}") { backStackEntry ->
-                            val recordIdString = backStackEntry.arguments?.getString("recordId")
-                            val recordId = recordIdString?.let {
-                                try { Uuid.parse(it) } catch (e: IllegalArgumentException) { null }
-                            }
-                            val currentRecord by medVM.currentRecord.collectAsState()
-
-                            // Use LaunchedEffect to load details when recordId is valid
-                            LaunchedEffect(recordId) {
-                                if (recordId != null) {
-                                    // Assuming loadRecordDetailsById exists in VM
-                                    medVM.loadRecordDetailsById(recordId)
-                                } else {
-                                    // Handle invalid ID if necessary, maybe clear currentRecord
-                                    medVM.clearCurrentRecord() // Add this function to VM
-                                }
-                            }
-
-                            if (recordId == null) {
-                                Text("Nieprawidłowy ID rekordu") // Handle invalid ID from route
-                            } else if (currentRecord != null && currentRecord?.id == recordId) {
-                                // Ensure the loaded record matches the requested ID
-                                MedicalRecordDetailsScreen(
-                                    medicalRecord = currentRecord!!, // Not null here due to check
-                                    recordId = recordId.toString(), // Pass the validated ID string
-                                    onNavigateBack = { navController.popBackStack() },
-                                    onEditRecord = { navController.navigate("record_edit/${currentRecord!!.id}") },
-                                )
-                            } else {
-                                // Show loading indicator while currentRecord is null or doesn't match
-                                CircularProgressIndicator()
-                                // Optionally add Text("Ładowanie...")
-                            }
-                        }
-                        composable("record_edit/{recordId}") { backStackEntry ->
-                            val recordIdString = backStackEntry.arguments?.getString("recordId")
-                             val recordId = recordIdString?.let {
-                                try { Uuid.parse(it) } catch (e: IllegalArgumentException) { null }
-                            }
-                            val currentRecord by medVM.currentRecord.collectAsState()
-
-                            // Ensure correct record is loaded for editing
-                            LaunchedEffect(recordId) {
-                                if (recordId != null && currentRecord?.id != recordId) {
-                                     medVM.loadRecordDetailsById(recordId) // Ensure correct record is loaded
-                                } else if (recordId == null) {
-                                     medVM.clearCurrentRecord() // Add this function to VM
-                                }
-                            }
-
-
-                            if (recordId == null) {
-                                Text("Nieprawidłowy ID rekordu do edycji")
-                            } else if (currentRecord != null && currentRecord?.id == recordId) {
-                                MedicalRecordEditScreen(
-                                    medicalRecord = currentRecord!!,
-                                    onBackClick = { navController.popBackStack() },
-                                    onRecordEdited = { updatedRecord ->
-                                        medVM.updateRecord(updatedRecord)
-                                        navController.popBackStack()
-                                    },
-                                    copyFileToLocalStorage = medVM::copyFileToLocalStorage,
-                                    onDeleteRecord = { record ->
-                                        medVM.deleteRecord(record)
-                                        navController.popBackStack() // Navigate back after delete
-                                    }
-                                )
-                            } else {
-                                // Loading indicator for edit screen
-                                CircularProgressIndicator()
-                                // Optionally add Text("Ładowanie edycji...")
-                            }
-                        }
-                        composable("record_new") {
-                            // Create a new record screen with null record
-                            MedicalRecordEditScreen(
-                                medicalRecord = null,
-                                onBackClick = { navController.popBackStack() },
-                                onRecordEdited = { newRecordData ->
-                                    medVM.addNewRecord(newRecordData)
-                                    navController.popBackStack()
-                                },
-                                copyFileToLocalStorage = medVM::copyFileToLocalStorage,
-                                // No delete option for new records
-                                onDeleteRecord = null
-                            )
-                        }
-                        composable("statistics") {
-                            val chartData by statsVM.chartData.collectAsState()
-                            val selectedType by statsVM.selectedType.collectAsState()
-                            val metric by statsVM.metric.collectAsState()
-                            val dateFrom by statsVM.dateFrom.collectAsState()
-                            val dateTo by statsVM.dateTo.collectAsState()
-
+                        composable(BottomNavItem.Statistics.route) {
+                            // Use statistics ViewModel directly with koinViewModel
+                            val statisticsViewModel: StatisticsViewModel = koinViewModel()
                             StatisticsScreen(
-                                selectedType = selectedType,
-                                selectType = { statsVM.selectType(it) },
-                                metric = metric,
-                                selectMetric = { statsVM.selectMetric(it) },
-                                dateFrom = dateFrom,
-                                dateTo = dateTo,
-                                chartData = chartData,
-                                updateDateRange = { from, to -> statsVM.updateDateRange(from, to) },
+                                selectedType = statisticsViewModel.selectedType.collectAsState().value,
+                                selectType = statisticsViewModel::selectType,
+                                metric = statisticsViewModel.metric.collectAsState().value,
+                                selectMetric = statisticsViewModel::selectMetric,
+                                dateFrom = statisticsViewModel.dateFrom.collectAsState().value,
+                                dateTo = statisticsViewModel.dateTo.collectAsState().value,
+                                chartData = statisticsViewModel.chartData.collectAsState().value,
+                                updateDateRange = statisticsViewModel::updateDateRange,
                                 onBack = { navController.popBackStack() }
                             )
                         }
-                        composable("export") {
-                            val records by medVM.filteredRecords.collectAsState()
-                            val exportState by exportVM.exportState.collectAsState()
+                        composable(BottomNavItem.Export.route) {
+                            // Use export ViewModel directly with koinViewModel
+                            val exportViewModel: ExportViewModel = koinViewModel()
                             ExportScreen(
-                                records = records,
+                                records = medicalRecordViewModel.allRecords.collectAsState().value,
                                 onBack = { navController.popBackStack() },
-                                exportRecords = exportVM::exportRecords,
-                                exportState = exportState
+                                exportRecords = exportViewModel::exportRecords,
+                                exportState = exportViewModel.exportState.collectAsState().value
                             )
                         }
+                        composable("record_detail/{recordId}") { backStackEntry ->
+                            val recordId = backStackEntry.arguments?.getString("recordId")
+                            // When this screen is shown, load the record by ID
+                            LaunchedEffect(recordId) {
+                                if (recordId != null) {
+                                    medicalRecordViewModel.loadRecordDetailsById(Uuid.parse(recordId))
+                                }
+                            }
+                            MedicalRecordDetailsScreen(
+                                recordId = recordId,
+                                onNavigateBack = { navController.popBackStack() },
+                                onEditRecord = { recordId ->
+                                    navController.navigate("record_edit/$recordId")
+                                },
+                                medicalRecord = medicalRecordViewModel.currentRecord.collectAsState().value
+                            )
+                        }
+                        composable("record_new") {
+                            // Initialize view model for new record
+                            LaunchedEffect(Unit) {
+                                // Reset all the state for creating a new record
+                                medicalRecordViewModel.loadMedicalRecord(null) 
+                            }
+                        
+                            MedicalRecordEditScreen(
+                                medicalRecord = null, // null for new record
+                                onBackClick = { navController.popBackStack() },
+                                onRecordEdited = { record ->
+                                    // Call addNewRecord for new records
+                                    medicalRecordViewModel.addNewRecord(record) 
+                                    navController.popBackStack()
+                                },
+                                copyFileToLocalStorage = { context, uri, fileName, callback ->
+                                    medicalRecordViewModel.copyFileToLocalStorage(
+                                        context,
+                                        uri,
+                                        fileName,
+                                        callback
+                                    )
+                                },
+                                onDeleteRecord = null,
+                                pendingAttachment = medicalRecordViewModel.pendingAttachment.collectAsState().value,
+                                consumesPendingAttachment = medicalRecordViewModel::consumePendingAttachment
+                            )
+                        }
+                        composable("record_edit/{recordId}") { backStackEntry ->
+                            val recordId = backStackEntry.arguments?.getString("recordId")
+                            // When editing an existing record, load it by ID
+                            LaunchedEffect(recordId) {
+                                if (recordId != null) {
+                                    // Properly load record with all related data
+                                    medicalRecordViewModel.loadMedicalRecord(Uuid.parse(recordId))
+                                }
+                            }
+                            MedicalRecordEditScreen(
+                                medicalRecord = medicalRecordViewModel.currentRecord.collectAsState().value,
+                                onBackClick = { navController.popBackStack() },
+                                onRecordEdited = { record ->
+                                    // Call updateRecord for existing records
+                                    medicalRecordViewModel.updateRecord(record)
+                                    navController.popBackStack()
+                                },
+                                copyFileToLocalStorage = { context, uri, fileName, callback ->
+                                    medicalRecordViewModel.copyFileToLocalStorage(
+                                        context,
+                                        uri,
+                                        fileName,
+                                        callback
+                                    )
+                                },
+                                onDeleteRecord = { record ->
+                                    medicalRecordViewModel.deleteRecord(record)
+                                    navController.popBackStack()
+                                },
+                                pendingAttachment = null,
+                                consumesPendingAttachment = {}
+                            )
+                        }
+                    }
+                }
+
+                // Perform navigation after composition if pendingNavigation is set
+                LaunchedEffect(pendingNavigation) {
+                    pendingNavigation?.let { route ->
+                        navController.navigate(route)
+                        pendingNavigation = null // Reset after navigation
+                    }
+                }
+            }
+        }
+    }
+
+    // Handle intents received while the activity is running
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Set the new intent for the activity
+        setIntent(intent)
+        // Handle the new intent
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VIEW && intent.data != null) {
+            val uri: Uri? = intent.data
+            val mimeType: String? = intent.type ?: contentResolver.getType(uri!!) // Get MIME type
+
+            if (uri != null && mimeType != null && (mimeType.startsWith("image/") || mimeType == "application/pdf")) {
+                // Launch a coroutine to copy the file and update the ViewModel
+                lifecycleScope.launch {
+                    // Get the ViewModel through regular Koin DI
+                    val medicalRecordViewModel = GlobalContext.get().get<MedicalRecordViewModel>()
+                    val clinicalData = medicalRecordViewModel.copyFileToLocalStorage(this@MainActivity, uri, mimeType)
+                    if (clinicalData != null) {
+                        medicalRecordViewModel.setPendingAttachment(clinicalData)
+                        // Set pending navigation to trigger after composition
+                        pendingNavigation = "record_new" // Navigate to new record screen
                     }
                 }
             }

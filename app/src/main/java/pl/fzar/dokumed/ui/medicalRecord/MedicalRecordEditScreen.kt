@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
@@ -42,6 +40,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,7 +73,9 @@ fun MedicalRecordEditScreen(
     onBackClick: () -> Unit,
     onRecordEdited: (MedicalRecord) -> Unit,
     copyFileToLocalStorage: (Context, Uri, String, (String) -> Unit) -> Unit,
-    onDeleteRecord: ((MedicalRecord) -> Unit)? = null
+    onDeleteRecord: ((MedicalRecord) -> Unit)? = null,
+    pendingAttachment: ClinicalData? = null,
+    consumesPendingAttachment: () -> Unit,
 ) {
     val context = LocalContext.current
     
@@ -144,6 +146,17 @@ fun MedicalRecordEditScreen(
                 // Add the new file to the list
                 clinicalDataList = clinicalDataList + newClinicalData
             }
+        }
+    }
+
+    // Handle pending attachment for new records
+    LaunchedEffect(isNewRecord, pendingAttachment) {
+        if (isNewRecord && pendingAttachment != null) {
+            // Only add if not already present (e.g., due to config change)
+            if (clinicalDataList.none { it.filePath == pendingAttachment!!.filePath }) {
+                clinicalDataList = clinicalDataList + pendingAttachment!!
+            }
+            consumesPendingAttachment()// Consume it after adding
         }
     }
 
@@ -223,7 +236,7 @@ fun MedicalRecordEditScreen(
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.save),
+                    painter = painterResource(id = R.drawable.ic_save),
                     contentDescription = "Zapisz",
                     modifier = Modifier.size(24.dp)
                 )
@@ -361,8 +374,9 @@ fun MedicalRecordEditScreen(
 
                     // List of attached files
                     if (clinicalDataList.isNotEmpty()) {
-                        LazyColumn(modifier = Modifier.height(150.dp)) { // Limit height
-                            items(clinicalDataList) { fileData ->
+                        // Use LazyColumn or Column based on expected number of files
+                        Column { // Changed from LazyColumn for simplicity if list is short
+                            clinicalDataList.forEach { fileData -> // Iterate directly
                                 Row(
                                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
@@ -374,7 +388,7 @@ fun MedicalRecordEditScreen(
                                     )
                                     IconButton(
                                         onClick = {
-                                            clinicalDataList = clinicalDataList.filter { it.id != fileData.id }
+                                            clinicalDataList = clinicalDataList.filter { it.id != fileData.id && it.filePath != fileData.filePath } // Ensure correct removal
                                             // Optional: Delete the actual file from storage here if needed
                                         },
                                         modifier = Modifier.size(24.dp)
@@ -439,28 +453,4 @@ fun MedicalRecordEditScreen(
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewMedicalRecordEditScreen() {
-    MedicalRecordEditScreen(
-        medicalRecord = dummyRecords[7],
-        onBackClick = {},
-        onRecordEdited = {},
-        copyFileToLocalStorage = { _, _, _, _ -> },
-        onDeleteRecord = { }
-    )
-}
-
-@Preview(showBackground = true, name = "New Record")
-@Composable
-fun PreviewNewMedicalRecordEditScreen() {
-    MedicalRecordEditScreen(
-        medicalRecord = null, // New record
-        onBackClick = {},
-        onRecordEdited = {},
-        copyFileToLocalStorage = { _, _, _, _ -> },
-        onDeleteRecord = null
-    )
 }
