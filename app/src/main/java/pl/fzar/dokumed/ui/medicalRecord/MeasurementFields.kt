@@ -14,22 +14,24 @@ import pl.fzar.dokumed.data.model.Measurement
 
 @Composable
 fun MeasurementFields(
-    measurement: Measurement, // Expect non-null
+    measurement: Measurement,
     onMeasurementChange: (Measurement) -> Unit
 ) {
     OutlinedTextField(
         value = measurement.value?.toString() ?: "",
-        onValueChange = { onMeasurementChange(measurement.copy(value = it.toDoubleOrNull())) },
-        label = { Text("Wartość") },
-        modifier = Modifier.fillMaxWidth(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number) // Allow decimals
+        onValueChange = { newValue ->
+            onMeasurementChange(measurement.copy(value = newValue.toDoubleOrNull()))
+        },
+        label = { Text("Value") }, // TODO: translate
+        modifier = Modifier.fillMaxWidth()
     )
     Spacer(Modifier.height(8.dp))
     OutlinedTextField(
         value = measurement.unit ?: "",
-        onValueChange = { onMeasurementChange(measurement.copy(unit = it)) },
-        label = { Text("Jednostka") },
+        onValueChange = { newUnit ->
+            onMeasurementChange(measurement.copy(unit = newUnit.ifBlank { null }))
+        },
+        label = { Text("Jednostka") }, // TODO: Consider specific labels based on type
         modifier = Modifier.fillMaxWidth()
     )
-    Spacer(Modifier.height(8.dp))
 }

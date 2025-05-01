@@ -1,6 +1,10 @@
 package pl.fzar.dokumed.ui.components
 
-import androidx.compose.material3.*
+import androidx.annotation.DrawableRes
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.res.painterResource
@@ -10,7 +14,6 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import pl.fzar.dokumed.R
-import androidx.annotation.DrawableRes
 
 // Define sealed class for Bottom Navigation Items using DrawableRes
 sealed class BottomNavItem(val route: String, val labelResId: Int, @DrawableRes val iconResId: Int) {

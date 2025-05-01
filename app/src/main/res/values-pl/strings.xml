@@ -38,4 +38,15 @@
     <string name="bottom_nav_records">Wpisy</string>
     <string name="bottom_nav_statistics">Statystyki</string>
     <string name="bottom_nav_export">Eksport</string>
+    <string name="edit_record">Edytuj wpis</string>
+    <string name="delete_record">Usuń wpis</string>
+    <string name="save">Zapisz</string>
+    <string name="date">Data</string>
+    <string name="type">Typ</string>
+    <string name="description">Opis</string>
+    <string name="doctor">Lekarz</string>
+    <string name="notes">Notatki</string>
+    <string name="add_tag">Dodaj tag</string>
+    <string name="remove_tag">Usuń tag</string>
+    <string name="select_date">Wybierz datę</string>
 </resources>

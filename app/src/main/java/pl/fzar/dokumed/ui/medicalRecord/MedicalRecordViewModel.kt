@@ -14,12 +14,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.todayIn
-import pl.fzar.dokumed.data.entity.MedicalRecordTagCrossRef
-import pl.fzar.dokumed.data.entity.TagEntity
 import pl.fzar.dokumed.data.model.ClinicalData
 import pl.fzar.dokumed.data.model.Measurement
 import pl.fzar.dokumed.data.model.MedicalRecord
@@ -260,19 +255,23 @@ class MedicalRecordViewModel(
         viewModelScope.launch {
             _recordState.value = RecordOperationState.Saving
             try {
-                // Use the comprehensive update method that handles all record details
+                // Ensure all clinical data have unique IDs and correct recordId
+                val clinicalDataWithIds = _clinicalDataState.value.map { data ->
+                    data.copy(
+                        id = data.id ?: kotlin.uuid.Uuid.random(),
+                        recordId = updatedRecord.id
+                    )
+                }
                 medicalRecordRepository.updateMedicalRecordWithDetails(
                     updatedRecord,
-                    _measurementsState.value, 
-                    _clinicalDataState.value,
+                    _measurementsState.value,
+                    clinicalDataWithIds,
                     _clinicalDataForDeletion.value
                 )
-                
                 // Update UI state
                 _currentRecord.value = updatedRecord
                 _clinicalDataForDeletion.value = emptySet()
                 _recordState.value = RecordOperationState.Success
-                
                 // Log success
                 println("Record successfully updated with ID: ${updatedRecord.id}")
             } catch (e: Exception) {
@@ -287,14 +286,18 @@ class MedicalRecordViewModel(
         viewModelScope.launch {
             _recordState.value = RecordOperationState.Saving
             try {
-                // Use the preferred method that handles measurements and clinical data
-                medicalRecordRepository.insertMedicalRecordWithDetails(newRecord, _measurementsState.value, _clinicalDataState.value)
-                
+                // Ensure all clinical data have unique IDs and correct recordId
+                val clinicalDataWithIds = _clinicalDataState.value.map { data ->
+                    data.copy(
+                        id = data.id ?: kotlin.uuid.Uuid.random(),
+                        recordId = newRecord.id
+                    )
+                }
+                medicalRecordRepository.insertMedicalRecord(newRecord)
                 // Clear states after successful save
                 _currentRecord.value = newRecord
                 _clinicalDataForDeletion.value = emptySet()
                 _recordState.value = RecordOperationState.Success
-                
                 // Log success
                 println("Record successfully saved with ID: ${newRecord.id}")
             } catch (e: Exception) {

@@ -7,11 +7,11 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
+import pl.fzar.dokumed.data.entity.ClinicalDataEntity
+import pl.fzar.dokumed.data.entity.MeasurementEntity
 import pl.fzar.dokumed.data.entity.MedicalRecordEntity
 import pl.fzar.dokumed.data.entity.MedicalRecordWithDetails
 import pl.fzar.dokumed.data.entity.MedicalRecordWithTags
-import pl.fzar.dokumed.data.entity.ClinicalDataEntity
-import pl.fzar.dokumed.data.entity.MeasurementEntity
 import kotlin.uuid.Uuid
 
 @Dao

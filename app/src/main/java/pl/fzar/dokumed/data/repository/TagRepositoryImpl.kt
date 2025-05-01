@@ -1,6 +1,5 @@
 package pl.fzar.dokumed.data.repository
 
-import kotlinx.coroutines.flow.Flow
 import pl.fzar.dokumed.data.dao.TagDao
 import pl.fzar.dokumed.data.entity.MedicalRecordTagCrossRef
 import pl.fzar.dokumed.data.entity.TagEntity

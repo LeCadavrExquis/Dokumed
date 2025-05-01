@@ -2,13 +2,17 @@ package pl.fzar.dokumed.ui.statistics
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.datetime.LocalDate
 import pl.fzar.dokumed.data.entity.MedicalRecordWithTags
 import pl.fzar.dokumed.data.model.BarData
 import pl.fzar.dokumed.data.model.MedicalRecordType
-import pl.fzar.dokumed.data.model.PointData
 import pl.fzar.dokumed.data.model.PieSliceData
+import pl.fzar.dokumed.data.model.PointData
 import pl.fzar.dokumed.data.model.StatisticMetric
 import pl.fzar.dokumed.data.model.StatisticsChartData
 import pl.fzar.dokumed.data.repository.MedicalRecordRepository

@@ -35,8 +35,10 @@ class MedicalRecordRepositoryImpl(
         }
         val clinicalData = details.clinicalData.map {
             ClinicalData(
+                id = it.id,
+                recordId = it.medicalRecordId,
                 filePath = it.filePath,
-                fileMimeType = it.fileMimeType,
+                fileMimeType = it.fileMimeType
             )
         }
         return MedicalRecord(
@@ -77,7 +79,7 @@ class MedicalRecordRepositoryImpl(
         // Insert clinical data
         record.clinicalData.forEach { c ->
             val clinicalDataEntity = ClinicalDataEntity(
-                id = Uuid.random(),
+                id = c.id ?: Uuid.random(),
                 medicalRecordId = record.id,
                 filePath = c.filePath,
                 fileMimeType = c.fileMimeType,
@@ -94,6 +96,8 @@ class MedicalRecordRepositoryImpl(
     }
 
     override suspend fun updateMedicalRecord(record: MedicalRecord) {
+        // Use withTransaction for atomicity
+
         val entity = MedicalRecordEntity(
             id = record.id,
             date = record.date,
@@ -117,9 +121,10 @@ class MedicalRecordRepositoryImpl(
             )
             medicalRecordDao.insertMeasurement(measurementEntity)
         }
+        // Insert clinical data
         record.clinicalData.forEach { c ->
             val clinicalDataEntity = ClinicalDataEntity(
-                id = Uuid.random(),
+                id = c.id ?: Uuid.random(), // Use existing ID or generate new if null
                 medicalRecordId = record.id,
                 filePath = c.filePath,
                 fileMimeType = c.fileMimeType,
@@ -134,6 +139,7 @@ class MedicalRecordRepositoryImpl(
             val tagId = if (tag.id == 0L) tagRepository.insertTag(tag) else tag.id
             tagRepository.insertCrossRef(MedicalRecordTagCrossRef(record.id, tagId))
         }
+
     }
 
     override suspend fun deleteMedicalRecord(record: MedicalRecord) {
@@ -177,8 +183,10 @@ class MedicalRecordRepositoryImpl(
             }
             val clinicalData = details.clinicalData.map {
                 ClinicalData(
+                    id = it.id,
+                    recordId = it.medicalRecordId,
                     filePath = it.filePath,
-                    fileMimeType = it.fileMimeType,
+                    fileMimeType = it.fileMimeType
                 )
             }
             MedicalRecord(
@@ -208,7 +216,12 @@ class MedicalRecordRepositoryImpl(
     override suspend fun getClinicalDataForRecords(recordIds: Set<Uuid>): List<ClinicalData> {
         val clinicalDataEntities = medicalRecordDao.getClinicalDataForRecords(recordIds)
         return clinicalDataEntities.map { entity ->
-            ClinicalData(filePath = entity.filePath, fileMimeType = entity.fileMimeType)
+            ClinicalData(
+                id = entity.id,
+                recordId = entity.medicalRecordId,
+                filePath = entity.filePath,
+                fileMimeType = entity.fileMimeType
+            )
         }
     }
 
@@ -225,6 +238,8 @@ class MedicalRecordRepositoryImpl(
         return clinicalDataEntities.filter { it.medicalRecordId == recordId }
             .map { entity ->
                 ClinicalData(
+                    id = entity.id,
+                    recordId = entity.medicalRecordId,
                     filePath = entity.filePath,
                     fileMimeType = entity.fileMimeType
                 )
@@ -261,7 +276,7 @@ class MedicalRecordRepositoryImpl(
         // Insert clinical data
         clinicalData.forEach { data ->
             val clinicalDataEntity = ClinicalDataEntity(
-                id = Uuid.random(),
+                id = data.id ?: Uuid.random(),
                 medicalRecordId = record.id,
                 filePath = data.filePath,
                 fileMimeType = data.fileMimeType
@@ -326,7 +341,7 @@ class MedicalRecordRepositoryImpl(
         // Insert current clinical data
         clinicalData.forEach { data ->
             val clinicalDataEntity = ClinicalDataEntity(
-                id = Uuid.random(),
+                id = data.id,
                 medicalRecordId = record.id,
                 filePath = data.filePath,
                 fileMimeType = data.fileMimeType

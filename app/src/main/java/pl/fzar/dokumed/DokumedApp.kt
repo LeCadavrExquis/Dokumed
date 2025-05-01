@@ -10,11 +10,10 @@ import pl.fzar.dokumed.data.repository.MedicalRecordRepository
 import pl.fzar.dokumed.data.repository.MedicalRecordRepositoryImpl
 import pl.fzar.dokumed.data.repository.TagRepository
 import pl.fzar.dokumed.data.repository.TagRepositoryImpl
+import pl.fzar.dokumed.ui.export.ExportViewModel
 import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordViewModel
 import pl.fzar.dokumed.ui.statistics.StatisticsViewModel
-import pl.fzar.dokumed.ui.export.ExportViewModel
 import pl.fzar.dokumed.util.FileUtil
-import kotlin.math.sin
 
 class DokumedApp : Application() {
     override fun onCreate() {

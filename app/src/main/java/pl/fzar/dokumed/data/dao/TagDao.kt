@@ -1,7 +1,12 @@
 package pl.fzar.dokumed.data.dao
 
-import androidx.room.*
-import pl.fzar.dokumed.data.entity.MedicalRecordEntity
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Transaction
+import androidx.room.Update
 import pl.fzar.dokumed.data.entity.MedicalRecordTagCrossRef
 import pl.fzar.dokumed.data.entity.TagEntity
 import kotlin.uuid.Uuid

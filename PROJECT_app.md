@@ -1,7 +1,8 @@
 # Dokumed App Documentation
 
 ## Overview
-The Dokumed app is an Android application for managing medical records. It allows users to store, categorize, search, and analyze their medical history.
+The Dokumed app is an Android *   Fixed bug where clinical data was not re-inserted during medical record updates.
+*   Ensured medical record updates (including related data like measurements, clinical data, and tags) are performed within a database transaction to guarantee atomicity and prevent partial data loss on errors.pplication for managing medical records. It allows users to store, categorize, search, and analyze their medical history.
 
 ## Main Features
 - Record management (add, edit, delete)
@@ -63,7 +64,13 @@ The app follows the MVVM (Model-View-ViewModel) architecture pattern with reposi
 - **Reliability**: Consistent data storage and retrieval
 
 ## Known Issues and Fixes
+- **Clinical Data Not Saved in DB (Root Cause: insertMedicalRecord)**: Fixed an issue where clinical data was not saved when using the basic `insertMedicalRecord` method. The code now ensures that the `id` and `medicalRecordId` fields are set for every clinical data item, so all attachments are reliably persisted in the database.
+- **Clinical Data Not Visible in App**: Fixed an issue where clinical data was not visible after saving. The mapping between the database entity and the in-memory model now ensures that all required fields (`id`, `recordId`, `filePath`, `fileMimeType`) are set both when saving and loading, so clinical data is always correctly linked and displayed.
 - **Record Saving Issue**: Fixed an issue where records weren't being properly saved to the database. The problem was related to the synchronization between the UI state and the ViewModel's internal state. Now records are saved using the `saveMedicalRecord()` method which correctly handles all related data (measurements, clinical data, tags).
+
+- **Clinical Data Not Saved Properly**: Fixed an issue where clinical data attachments were not reliably saved with medical records. The root cause was a mismatch between the in-memory model and the database entity: clinical data items did not always have a unique, stable `id` or the correct `recordId` set before saving. Now, before saving or updating a record, all clinical data items are assigned a unique `id` and the correct `recordId`, ensuring proper persistence and retrieval.
+
+- Fixed bug where clinical data was not re-inserted during medical record updates.
 
 ## Medical Record Management
 - View a list of medical records.

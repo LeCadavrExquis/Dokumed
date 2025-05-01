@@ -7,7 +7,6 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -23,7 +22,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
@@ -37,11 +35,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,9 +46,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import pl.fzar.dokumed.R
 import pl.fzar.dokumed.data.model.ClinicalData
 import pl.fzar.dokumed.data.model.Measurement
@@ -60,9 +59,9 @@ import pl.fzar.dokumed.data.model.MedicalRecord
 import pl.fzar.dokumed.data.model.MedicalRecordType
 import pl.fzar.dokumed.data.model.clinicalDataRecords
 import pl.fzar.dokumed.data.model.consultationRecords
-import pl.fzar.dokumed.data.model.dummyRecords
 import pl.fzar.dokumed.data.model.getLocalizedString
 import pl.fzar.dokumed.data.model.measurementRecords
+import pl.fzar.dokumed.ui.components.ConfirmationDialog
 import kotlin.uuid.Uuid
 
 
@@ -78,12 +77,11 @@ fun MedicalRecordEditScreen(
     consumesPendingAttachment: () -> Unit,
 ) {
     val context = LocalContext.current
-    
-    // Default values for new record
+
     val isNewRecord = medicalRecord == null
-    val initialDate = medicalRecord?.date ?: LocalDate(2025, 4, 30)
+    val initialDate = medicalRecord?.date ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
     val initialType = medicalRecord?.type ?: MedicalRecordType.CONSULTATION
-    
+
     var date by remember { mutableStateOf(initialDate) }
     var type by remember { mutableStateOf(initialType) }
     var expandedTypeSelector by remember { mutableStateOf(false) }
@@ -92,19 +90,15 @@ fun MedicalRecordEditScreen(
     var notes by remember { mutableStateOf(medicalRecord?.notes ?: "") }
     var tags by remember { mutableStateOf(medicalRecord?.tags?.toSet() ?: emptySet()) }
     var newTag by remember { mutableStateOf("") }
-    
-    // Clinical Data fields (can now hold multiple files)
+
     var clinicalDataList by remember {
         mutableStateOf(medicalRecord?.clinicalData ?: emptyList())
     }
 
-    // Measurement fields (for MEASUREMENT, MEDICATION, SYMPTOM)
     var measurement by remember {
-        // Initialize with a non-null Measurement object, even for new records
         mutableStateOf(medicalRecord?.measurements?.firstOrNull() ?: Measurement())
     }
 
-    // State for delete confirmation dialog
     var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     val datePickerDialog = remember {
@@ -122,39 +116,36 @@ fun MedicalRecordEditScreen(
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let {
-            var fileName = "uploaded_file_${Uuid.random()}" // Ensure unique default name
-            val mimeType = context.contentResolver.getType(it) // Get MIME type
-            if (uri.scheme == "content") {
-                val cursor = context.contentResolver.query(uri, null, null, null, null)
-                cursor?.use {
-                    if (it.moveToFirst()) {
-                        val columnIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                        if (columnIndex != -1) {
-                            fileName = it.getString(columnIndex)
-                        }
+        if (uri == null) return@rememberLauncherForActivityResult
+
+        var fileName = "uploaded_file_${Uuid.random()}"
+        val mimeType = context.contentResolver.getType(uri)
+        if (uri.scheme == "content") {
+            val cursor = context.contentResolver.query(uri, null, null, null, null)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    val columnIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (columnIndex != -1) {
+                        fileName = it.getString(columnIndex)
                     }
                 }
             }
-            copyFileToLocalStorage(context, it, fileName) { savedFilePath ->
-                // Create a new ClinicalData object for the uploaded file
-                val newClinicalData = ClinicalData(
-                    filePath = savedFilePath,
-                    fileMimeType = mimeType,
-                    fileName = fileName // Store the original filename
-                )
-                // Add the new file to the list
-                clinicalDataList = clinicalDataList + newClinicalData
-            }
+        }
+        copyFileToLocalStorage(context, uri, fileName) { savedFilePath ->
+            val newClinicalData = ClinicalData(
+                filePath = savedFilePath,
+                fileMimeType = mimeType,
+                fileName = fileName // Store the original filename
+            )
+            clinicalDataList = clinicalDataList + newClinicalData
         }
     }
 
     // Handle pending attachment for new records
     LaunchedEffect(isNewRecord, pendingAttachment) {
         if (isNewRecord && pendingAttachment != null) {
-            // Only add if not already present (e.g., due to config change)
-            if (clinicalDataList.none { it.filePath == pendingAttachment!!.filePath }) {
-                clinicalDataList = clinicalDataList + pendingAttachment!!
+            if (clinicalDataList.none { it.filePath == pendingAttachment.filePath }) {
+                clinicalDataList = clinicalDataList + pendingAttachment
             }
             consumesPendingAttachment()// Consume it after adding
         }
@@ -163,10 +154,10 @@ fun MedicalRecordEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Edytuj rekord medyczny") },
+                title = { Text(stringResource(R.string.edit_record)) }, 
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Powrót")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
@@ -176,8 +167,8 @@ fun MedicalRecordEditScreen(
                             onClick = { showDeleteConfirmation = true },
                         ) {
                             Icon(
-                                Icons.Filled.Delete, 
-                                contentDescription = "Usuń rekord",
+                                Icons.Filled.Delete,
+                                contentDescription = stringResource(R.string.delete_record),
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
@@ -188,24 +179,20 @@ fun MedicalRecordEditScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    // Ensure measurement is handled safely
-                    val currentMeasurement = measurement // Capture current state
+                    val currentMeasurement = measurement
 
-                    val measurementsList = if (type in measurementRecords && currentMeasurement != null) {
-                        // Use safe access or provide defaults if needed
+                    val measurementsList = if (type in measurementRecords) {
                         listOf(currentMeasurement.copy(value = currentMeasurement.value?.toString()?.toDoubleOrNull()))
                     } else {
                         emptyList()
                     }
 
-                    // Use the clinicalDataList directly if the type supports it
                     val finalClinicalDataList = if (type in clinicalDataRecords || type in consultationRecords) {
                         clinicalDataList
                     } else {
                         emptyList()
                     }
 
-                    // Create or update the record
                     val updatedRecord = if (isNewRecord) {
                         MedicalRecord(
                             id = Uuid.random(),
@@ -215,7 +202,7 @@ fun MedicalRecordEditScreen(
                             notes = notes,
                             tags = tags.toList(),
                             measurements = measurementsList,
-                            clinicalData = finalClinicalDataList, // Use the potentially updated list
+                            clinicalData = finalClinicalDataList,
                             doctor = doctor
                         )
                     } else {
@@ -226,7 +213,7 @@ fun MedicalRecordEditScreen(
                             notes = notes,
                             tags = tags.toList(),
                             measurements = measurementsList,
-                            clinicalData = finalClinicalDataList, // Use the potentially updated list
+                            clinicalData = finalClinicalDataList,
                             doctor = doctor
                         )
                     }
@@ -237,7 +224,7 @@ fun MedicalRecordEditScreen(
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_save),
-                    contentDescription = "Zapisz",
+                    contentDescription = stringResource(R.string.save),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -249,22 +236,20 @@ fun MedicalRecordEditScreen(
                 .padding(16.dp)
                 .fillMaxSize()
         ) {
-            // Data
             OutlinedTextField(
                 value = date.toString(),
                 onValueChange = {},
-                label = { Text("Data") },
+                label = { Text(stringResource(R.string.date)) },
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = true,
                 trailingIcon = {
                     IconButton(onClick = { datePickerDialog.show() }) {
-                        Icon(Icons.Filled.Add, contentDescription = "Wybierz datę")
+                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.select_date))
                     }
                 }
             )
             Spacer(Modifier.height(8.dp))
 
-            // Typ
             ExposedDropdownMenuBox(
                 expanded = expandedTypeSelector,
                 onExpandedChange = { expandedTypeSelector = !expandedTypeSelector },
@@ -274,7 +259,7 @@ fun MedicalRecordEditScreen(
                     readOnly = true,
                     value = type.getLocalizedString(context),
                     onValueChange = { },
-                    label = { Text("Typ") },
+                    label = { Text(stringResource(R.string.type)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expandedTypeSelector) },
                     modifier = Modifier.menuAnchor(),
                 )
@@ -295,33 +280,30 @@ fun MedicalRecordEditScreen(
             }
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Description
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
-                label = { Text("Opis") },
+                label = { Text(stringResource(R.string.description)) },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(8.dp))
 
             OutlinedTextField(
-                value = doctor ?: "",
+                value = doctor,
                 onValueChange = { doctor = it },
-                label = { Text("Lekarz") },
+                label = { Text(stringResource(R.string.doctor)) },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(8.dp))
 
-            // Notes
             OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
-                label = { Text("Notatki") },
+                label = { Text(stringResource(R.string.notes)) },
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(8.dp))
 
-            // Tagi
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -329,7 +311,7 @@ fun MedicalRecordEditScreen(
                 OutlinedTextField(
                     value = newTag,
                     onValueChange = { newTag = it },
-                    label = { Text("Dodaj tag") },
+                    label = { Text(stringResource(R.string.add_tag)) },
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -355,7 +337,7 @@ fun MedicalRecordEditScreen(
                         trailingIcon = {
                             Icon(
                                 Icons.Filled.Close,
-                                contentDescription = "Usuń tag",
+                                contentDescription = stringResource(R.string.remove_tag),
                                 modifier = Modifier.size(16.dp)
                             )
                         },
@@ -368,89 +350,39 @@ fun MedicalRecordEditScreen(
             // Type-specific fields
             when (type) {
                 in consultationRecords, in clinicalDataRecords -> {
-                    // Section for managing multiple files
-                    Text("Załączone pliki:", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(8.dp))
-
-                    // List of attached files
-                    if (clinicalDataList.isNotEmpty()) {
-                        // Use LazyColumn or Column based on expected number of files
-                        Column { // Changed from LazyColumn for simplicity if list is short
-                            clinicalDataList.forEach { fileData -> // Iterate directly
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = fileData.fileName ?: fileData.filePath?.substringAfterLast('/') ?: "Nieznany plik",
-                                        modifier = Modifier.weight(1f).padding(end = 8.dp)
-                                    )
-                                    IconButton(
-                                        onClick = {
-                                            clinicalDataList = clinicalDataList.filter { it.id != fileData.id && it.filePath != fileData.filePath } // Ensure correct removal
-                                            // Optional: Delete the actual file from storage here if needed
-                                        },
-                                        modifier = Modifier.size(24.dp)
-                                    ) {
-                                        Icon(Icons.Filled.Close, contentDescription = "Usuń plik")
-                                    }
-                                }
-                            }
+                    AttachedFilesSection(
+                        clinicalDataList = clinicalDataList,
+                        onAddFileClick = { filePickerLauncher.launch("*/*") },
+                        onRemoveFileClick = { fileData ->
+                            clinicalDataList = clinicalDataList.filter { it.id != fileData.id && it.filePath != fileData.filePath }
+                            // Optional: Delete the actual file from storage here if needed
                         }
-                    } else {
-                        Text("Brak załączonych plików.")
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-
-                    // Button to add a new file
-                    Button(onClick = { filePickerLauncher.launch("*/*") }) {
-                        Icon(Icons.Filled.Add, contentDescription = "Dodaj plik", modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Dodaj plik")
-                    }
-                    Spacer(Modifier.height(16.dp)) // Add space after file section
+                    )
                 }
                 in measurementRecords -> {
-                    measurement?.let { m -> // Use let for safe access
+                    measurement.let { m -> // Use let for safe access
                         MeasurementFields(
                             measurement = m, // Pass non-null measurement
                             onMeasurementChange = { measurement = it }
                         )
                     }
                 }
-                // Removed ClinicalDataFields call as file handling is now above
                  else -> {} // Handle other types if necessary (no specific fields for others currently)
             }
 
             // Add some extra space at the bottom to ensure content isn't hidden behind the FAB
             Spacer(Modifier.height(80.dp))
-
-            // Delete confirmation dialog
-            if (showDeleteConfirmation) {
-                AlertDialog(
-                    onDismissRequest = { showDeleteConfirmation = false },
-                    title = { Text("Potwierdzenie usunięcia") },
-                    text = { Text("Czy na pewno chcesz usunąć ten rekord? Tej operacji nie można cofnąć.") },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                showDeleteConfirmation = false
-                                onDeleteRecord?.invoke(medicalRecord!!)
-                                onBackClick()
-                            }
-                        ) {
-                            Text("Usuń", color = MaterialTheme.colorScheme.error)
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showDeleteConfirmation = false }) {
-                            Text("Anuluj")
-                        }
-                    }
-                )
-            }
+            
+            ConfirmationDialog(
+                showDialog = showDeleteConfirmation,
+                onDismissRequest = { showDeleteConfirmation = false },
+                onConfirm = {
+                    onDeleteRecord?.invoke(medicalRecord!!)
+                    onBackClick()
+                },
+                title = stringResource(R.string.deletion_confirmation_title),
+                text = stringResource(R.string.deletion_confirmation_message)
+            )
         }
     }
 }

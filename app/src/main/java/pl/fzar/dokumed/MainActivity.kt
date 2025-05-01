@@ -2,32 +2,30 @@ package pl.fzar.dokumed
 
 import MedicalRecordsScreen
 import android.content.Intent
-import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
-import pl.fzar.dokumed.data.model.ClinicalData // Import ClinicalData
+import org.koin.androidx.compose.koinViewModel
+import org.koin.core.context.GlobalContext
+import pl.fzar.dokumed.ui.components.AppBottomNavigationBar
+import pl.fzar.dokumed.ui.components.BottomNavItem
 import pl.fzar.dokumed.ui.export.ExportScreen
 import pl.fzar.dokumed.ui.export.ExportViewModel
 import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordDetailsScreen
@@ -36,11 +34,7 @@ import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordViewModel
 import pl.fzar.dokumed.ui.statistics.StatisticsScreen
 import pl.fzar.dokumed.ui.statistics.StatisticsViewModel
 import pl.fzar.dokumed.ui.theme.DokumedTheme
-import pl.fzar.dokumed.ui.components.AppBottomNavigationBar
-import pl.fzar.dokumed.ui.components.BottomNavItem
 import kotlin.uuid.Uuid
-import org.koin.androidx.compose.koinViewModel
-import org.koin.core.context.GlobalContext
 
 class MainActivity : ComponentActivity() {
     // State to trigger navigation after intent processing
