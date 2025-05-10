@@ -1,6 +1,8 @@
 package pl.fzar.dokumed.data.repository
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import pl.fzar.dokumed.data.dao.MedicalRecordDao
 import pl.fzar.dokumed.data.entity.ClinicalDataEntity
 import pl.fzar.dokumed.data.entity.MeasurementEntity
@@ -21,6 +23,44 @@ class MedicalRecordRepositoryImpl(
 
     override fun getAllRecords(): Flow<List<MedicalRecordWithTags>> {
         return medicalRecordDao.getAllRecords()
+    }
+
+    override suspend fun getAllRecordsWithDetails(): List<MedicalRecord> {
+        // Get all record entities
+        val allEntities = medicalRecordDao.getAllMedicalRecords()
+        if (allEntities.isEmpty()) return emptyList()
+        val recordIds = allEntities.map { it.id }.toSet()
+        // Get all details for all records
+        val detailsList = medicalRecordDao.getMedicalRecordsWithDetails(recordIds)
+        return detailsList.map { details ->
+            val entity = details.medicalRecord
+            val tags = details.tags.map { it.name }
+            val measurements = details.measurements.map {
+                pl.fzar.dokumed.data.model.Measurement(
+                    value = it.value,
+                    unit = it.unit
+                )
+            }
+            val clinicalData = details.clinicalData.map {
+                pl.fzar.dokumed.data.model.ClinicalData(
+                    id = it.id,
+                    recordId = it.medicalRecordId,
+                    filePath = it.filePath,
+                    fileMimeType = it.fileMimeType
+                )
+            }
+            pl.fzar.dokumed.data.model.MedicalRecord(
+                id = entity.id,
+                date = entity.date,
+                type = entity.type,
+                description = entity.description,
+                notes = entity.notes,
+                tags = tags,
+                measurements = measurements,
+                clinicalData = clinicalData,
+                doctor = entity.doctor
+            )
+        }
     }
 
     override suspend fun getMedicalRecordById(id: Uuid): MedicalRecord? {
@@ -143,12 +183,19 @@ class MedicalRecordRepositoryImpl(
     }
 
     override suspend fun deleteMedicalRecord(record: MedicalRecord) {
-        // Remove tag cross-refs
+        // Use withContext(Dispatchers.IO) for file operations
+        withContext(Dispatchers.IO) {
+            // Delete associated files first
+            record.clinicalData.forEach { clinicalDataItem ->
+                clinicalDataItem.filePath?.let {
+                    deleteAssociatedFile(it) // Call the existing method to delete the file
+                }
+            }
+        }
+        // Then, proceed to delete database entries
         tagRepository.deleteCrossRefsForMedicalRecord(record.id)
-        // Remove measurements and clinical data
         medicalRecordDao.deleteMeasurementsForRecord(record.id)
-        medicalRecordDao.deleteClinicalDataForRecord(record.id)
-        // Remove the record itself
+        medicalRecordDao.deleteClinicalDataForRecord(record.id) // Deletes all clinical data for the record
         medicalRecordDao.deleteMedicalRecord(record.id)
     }
 
@@ -263,23 +310,23 @@ class MedicalRecordRepositoryImpl(
         medicalRecordDao.insert(entity)
 
         // Insert measurements
-        measurements.forEach { measurement ->
+        measurements.forEach { m ->
             val measurementEntity = MeasurementEntity(
                 id = Uuid.random(),
                 medicalRecordId = record.id,
-                value = measurement.value,
-                unit = measurement.unit
+                value = m.value,
+                unit = m.unit
             )
             medicalRecordDao.insertMeasurement(measurementEntity)
         }
 
         // Insert clinical data
-        clinicalData.forEach { data ->
+        clinicalData.forEach { c ->
             val clinicalDataEntity = ClinicalDataEntity(
-                id = data.id ?: Uuid.random(),
+                id = c.id ?: Uuid.random(),
                 medicalRecordId = record.id,
-                filePath = data.filePath,
-                fileMimeType = data.fileMimeType
+                filePath = c.filePath,
+                fileMimeType = c.fileMimeType,
             )
             medicalRecordDao.insertClinicalData(clinicalDataEntity)
         }
@@ -296,8 +343,22 @@ class MedicalRecordRepositoryImpl(
         record: MedicalRecord,
         measurements: List<Measurement>,
         clinicalData: List<ClinicalData>,
-        clinicalDataToDelete: Set<Uuid>
+        clinicalDataToDelete: Set<Uuid> // IDs of ClinicalDataEntity to delete
     ) {
+        // Fetch the ClinicalDataEntities to be deleted to get their filePaths
+        if (clinicalDataToDelete.isNotEmpty()) {
+            val clinicalDataEntitiesToDelete = medicalRecordDao.getClinicalDataByIds(clinicalDataToDelete)
+            withContext(Dispatchers.IO) {
+                clinicalDataEntitiesToDelete.forEach { entity ->
+                    entity.filePath?.let { deleteAssociatedFile(it) }
+                }
+            }
+            // Delete the database entries for these specific clinical data items
+            clinicalDataToDelete.forEach { id ->
+                medicalRecordDao.deleteClinicalDataById(id)
+            }
+        }
+
         // Update the record entity
         val entity = MedicalRecordEntity(
             id = record.id,
@@ -309,46 +370,40 @@ class MedicalRecordRepositoryImpl(
         )
         medicalRecordDao.update(entity)
 
-        // Delete old measurements
+        // Clear and re-insert measurements (or implement more granular update)
         medicalRecordDao.deleteMeasurementsForRecord(record.id)
-        
-        // Insert updated measurements
-        measurements.forEach { measurement ->
+        record.measurements.forEach { m ->
             val measurementEntity = MeasurementEntity(
                 id = Uuid.random(),
                 medicalRecordId = record.id,
-                value = measurement.value,
-                unit = measurement.unit
+                value = m.value,
+                unit = m.unit
             )
             medicalRecordDao.insertMeasurement(measurementEntity)
         }
-        
-        // Delete clinical data marked for deletion
-        // For each item in clinicalDataToDelete, we should:
-        // 1. Get the file path
-        // 2. Delete the file from storage
-        // 3. Delete the entity from the database
-        // However, since the Uuid doesn't directly map to filePath, we'll need to first remove entities from DB
-        
-        // Get current clinical data
-        val existingClinicalData = medicalRecordDao.getClinicalDataForRecords(setOf(record.id))
-        
-        // Delete files for clinical data marked for deletion (assuming we can identify them)
-        // This would require additions to the DAO to query by ID
-        // For now, we'll just delete all and re-insert, similar to updateMedicalRecord method
-        medicalRecordDao.deleteClinicalDataForRecord(record.id)
-        
-        // Insert current clinical data
-        clinicalData.forEach { data ->
+
+        // Upsert clinical data (those not in clinicalDataToDelete)
+        // We assume clinicalData list contains items to be kept or added.
+        // If an item in clinicalData has an ID, it might be an update, otherwise new.
+        // For simplicity, current logic in MedicalRecordViewModel seems to replace all, which is fine.
+        // Here, we ensure only the remaining/new ones are inserted.
+        // First, delete all existing clinical data for the record that were not explicitly marked for deletion earlier.
+        // This step might be redundant if the calling ViewModel manages the full list.
+        // However, to be safe and ensure only `clinicalData` list items persist:
+        // medicalRecordDao.deleteClinicalDataForRecord(record.id) // This would delete ALL, be careful.
+        // Instead, rely on the `clinicalDataToDelete` for specific deletions.
+        // Then, insert the items present in the `clinicalData` list.
+
+        record.clinicalData.forEach { c ->
             val clinicalDataEntity = ClinicalDataEntity(
-                id = data.id,
+                id = c.id ?: Uuid.random(),
                 medicalRecordId = record.id,
-                filePath = data.filePath,
-                fileMimeType = data.fileMimeType
+                filePath = c.filePath,
+                fileMimeType = c.fileMimeType
             )
-            medicalRecordDao.insertClinicalData(clinicalDataEntity)
+            medicalRecordDao.insertClinicalData(clinicalDataEntity) // This will replace if ID exists due to OnConflictStrategy.REPLACE
         }
-        
+
         // Update tags
         tagRepository.deleteCrossRefsForMedicalRecord(record.id)
         for (tagName in record.tags) {
@@ -356,5 +411,15 @@ class MedicalRecordRepositoryImpl(
             val tagId = if (tag.id == 0L) tagRepository.insertTag(tag) else tag.id
             tagRepository.insertCrossRef(MedicalRecordTagCrossRef(record.id, tagId))
         }
+    }
+
+    // Implementation for the new method
+    override suspend fun deleteClinicalDataItem(clinicalDataId: Uuid, filePath: String?) {
+        withContext(Dispatchers.IO) {
+            filePath?.let {
+                deleteAssociatedFile(it)
+            }
+        }
+        medicalRecordDao.deleteClinicalDataById(clinicalDataId)
     }
 }

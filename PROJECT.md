@@ -25,4 +25,4 @@ The project follows a clean architecture approach with the following layers:
 ## Applications
 
 For application-specific documentation, see:
-- [App Documentation](PROJECT_app.md)
+- [App Documentation](PROJECT_app.md) - Includes features like record management, data export, user profiles, medication reminders, and **WebDAV cloud synchronization**.

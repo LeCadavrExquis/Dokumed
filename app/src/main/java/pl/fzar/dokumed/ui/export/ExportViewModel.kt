@@ -7,76 +7,111 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import pl.fzar.dokumed.data.model.ClinicalData // Assuming this path
-import pl.fzar.dokumed.data.model.Measurement // Assuming this path
-import pl.fzar.dokumed.data.model.MedicalRecord // Assuming this path
-import pl.fzar.dokumed.data.repository.MedicalRecordRepository
+import pl.fzar.dokumed.data.model.ClinicalData
+import pl.fzar.dokumed.data.model.Measurement
+import pl.fzar.dokumed.data.model.MedicalRecord
+import pl.fzar.dokumed.data.model.MedicalRecordType
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.OutputStreamWriter
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.uuid.Uuid
-import android.util.Log // Add Log import
+import android.util.Log
 import kotlinx.datetime.LocalDate
+import pl.fzar.dokumed.data.repository.MedicalRecordRepository
 
 sealed class ExportState {
     object Idle : ExportState()
     object InProgress : ExportState()
-    object Success : ExportState()
+    // Modify Success state to include the URI and the email flag
+    data class Success(val zipUri: Uri, val sendEmail: Boolean) : ExportState()
     data class Error(val message: String) : ExportState()
 }
 
 class ExportViewModel(
     private val appContext: Context,
-    private val medicalRecordRepository: MedicalRecordRepository
+    private val medicalRecordRepository: MedicalRecordRepository,
+    private val tagRepository: pl.fzar.dokumed.data.repository.TagRepository
 ) : ViewModel() {
     private val _exportState = MutableStateFlow<ExportState>(ExportState.Idle)
     val exportState: StateFlow<ExportState> = _exportState
 
-    fun exportRecords(recordIds: Set<Uuid>, destinationUri: Uri) {
+    // All records from the repository
+    private val _allRecords: MutableStateFlow<List<MedicalRecord>> = MutableStateFlow(emptyList())
+
+    // All tags from the repository
+    val allTags: MutableStateFlow<List<String>> = MutableStateFlow(emptyList())
+
+    init {
+        viewModelScope.launch {
+            _allRecords.value = medicalRecordRepository.getAllRecordsWithDetails()
+            allTags.value = tagRepository.getAllTags().map { it.name }
+        }
+    }
+    // Filter states
+    private val _selectedTypes = MutableStateFlow<Set<MedicalRecordType>>(emptySet())
+    val selectedTypes: StateFlow<Set<MedicalRecordType>> = _selectedTypes.asStateFlow()
+
+    private val _dateRangeStart = MutableStateFlow<LocalDate?>(null)
+    val dateRangeStart: StateFlow<LocalDate?> = _dateRangeStart.asStateFlow()
+
+    private val _dateRangeEnd = MutableStateFlow<LocalDate?>(null)
+    val dateRangeEnd: StateFlow<LocalDate?> = _dateRangeEnd.asStateFlow()
+
+    private val _selectedTags = MutableStateFlow<Set<String>>(emptySet())
+    val selectedTags: StateFlow<Set<String>> = _selectedTags.asStateFlow()
+
+    // Filtered records based on all records and filter states
+    val filteredRecords: StateFlow<List<MedicalRecord>> = combine(
+        _allRecords,
+        _selectedTypes,
+        _dateRangeStart,
+        _dateRangeEnd,
+        _selectedTags
+    ) { records, types, from, to, tags ->
+        records.filter { record ->
+            (types.isEmpty() || record.type in types) &&
+                    (tags.isEmpty() || record.tags.any { it in tags }) &&
+                    (from == null || record.date >= from) &&
+                    (to == null || record.date <= to)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Add sendEmailAfterExport parameter
+    fun exportRecords(recordIds: Set<Uuid>, destinationUri: Uri, sendEmailAfterExport: Boolean) {
         viewModelScope.launch {
             _exportState.value = ExportState.InProgress
-            Log.i("ExportViewModel", "Starting export for ${recordIds.size} records to $destinationUri") // Added Log
+            Log.i("ExportViewModel", "Starting export for ${recordIds.size} records to $destinationUri. Send email: $sendEmailAfterExport")
             try {
-                // Fetch records, filter out nulls if getMedicalRecordById can return null
-                val records = recordIds.map { medicalRecordRepository.getMedicalRecordById(it) }.filterNotNull()
-                // Fetch measurements, flatten the map values if necessary
+                val records = medicalRecordRepository.getMedicalRecords(recordIds)
                 val measurementsMap = medicalRecordRepository.getMeasurementsForRecords(recordIds)
-                val measurements = measurementsMap.values.flatten() // Flatten the list of lists
-                // Fetch clinical data (assuming this returns List<ClinicalData>)
-                val clinicalData = medicalRecordRepository.getClinicalDataForRecords(recordIds) // Assuming this returns List<ClinicalData>
+                val clinicalData = medicalRecordRepository.getClinicalDataForRecords(recordIds)
 
                 withContext(Dispatchers.IO) {
                     appContext.contentResolver.openOutputStream(destinationUri)?.use { outputStream ->
                         ZipOutputStream(BufferedOutputStream(outputStream)).use { zipStream ->
-                            // 1. Add main records CSV
-                            addRecordsCsvToZip(zipStream, records) // Pass non-nullable list
-
-                            // 2. Add measurement CSVs (grouped by description)
-                            // Pass records and the map to access parent data
+                            addRecordsCsvToZip(zipStream, records)
                             addMeasurementCsvsToZip(zipStream, records, measurementsMap)
-
-                            // 3. Add attached files (now ClinicalData)
-                            addFilesToZip(zipStream, clinicalData) // Pass clinicalData (List<ClinicalData>)
+                            addFilesToZip(zipStream, clinicalData)
                         }
                     } ?: throw Exception("Failed to open output stream for URI: $destinationUri")
                 }
-                _exportState.value = ExportState.Success
-                Log.i("ExportViewModel", "Export successful to $destinationUri") // Added Log
+                _exportState.value = ExportState.Success(destinationUri, sendEmailAfterExport)
+                Log.i("ExportViewModel", "Export successful to $destinationUri")
             } catch (e: Exception) {
-                Log.e("ExportViewModel", "Export failed", e) // Use Log.e with exception
+                Log.e("ExportViewModel", "Export failed", e)
                 _exportState.value = ExportState.Error("Export failed: ${e.message}")
-            } finally {
-                 // Optionally reset state after a delay or user action
-                 // kotlinx.coroutines.delay(3000)
-                 // _exportState.value = ExportState.Idle
+            }
             }
         }
-    }
 
     private fun addRecordsCsvToZip(zipStream: ZipOutputStream, records: List<MedicalRecord>) {
         zipStream.putNextEntry(ZipEntry("records.csv"))
@@ -183,5 +218,23 @@ class ExportViewModel(
      // Simple CSV escaping for quotes
     private fun escapeCsv(value: String): String {
         return value.replace("\"", "\"\"")
+    }
+
+    // Optional: Function to reset state manually if needed
+    fun resetExportState() {
+        _exportState.value = ExportState.Idle
+    }
+
+    fun updateSelectedTypes(types: Set<MedicalRecordType>) {
+        _selectedTypes.value = types
+    }
+
+    fun updateDateRange(from: LocalDate?, to: LocalDate?) {
+        _dateRangeStart.value = from
+        _dateRangeEnd.value = to
+    }
+
+    fun updateSelectedTags(tags: Set<String>) {
+        _selectedTags.value = tags
     }
 }

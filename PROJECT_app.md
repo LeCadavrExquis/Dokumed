@@ -1,3 +1,7 @@
+## Data Export (Details)
+
+- The export feature uses a repository method `getAllRecordsWithDetails()` to fetch all medical records with their full details (tags, measurements, clinical data, etc.).
+- This method is implemented in `MedicalRecordRepository` and `MedicalRecordRepositoryImpl` and is used by `ExportViewModel` to provide complete data for export and filtering.
 # Dokumed App Documentation
 
 ## Overview
@@ -11,6 +15,24 @@ The Dokumed app is an Android *   Fixed bug where clinical data was not re-inser
 - Statistics and insights
 - Data export and backup
   - Export selected medical records, associated measurements (grouped by description into separate CSVs), and attached files into a single ZIP archive.
+  - Option to send the exported ZIP archive via email after successful export.
+- User Profile Management
+  - Add and edit personal medical information: height, weight, blood type, illnesses, medications, allergies.
+  - Store emergency contact information (name and phone number).
+  - Record organ donor status.
+  - Profile data is stored securely using SharedPreferences.
+  - Allow users to set reminders for medications, including time, medication name, and dosage.
+- **Onboarding Carousel**:
+  - Displayed on the first app launch.
+  - Informs the user about the app's purpose and main features.
+  - Guides the user through setting up a mandatory PIN for app security.
+  - Optionally allows the user to input initial profile information (can be skipped).
+- **Cloud Synchronization (WebDAV)**:
+  - Users can configure WebDAV server credentials (URL, username, password) in the Profile screen.
+  - Synchronization is optional and independent of local storage.
+  - Medical records are exported in CSV format.
+  - Profile information is exported in JSON format (using Kotlinx Serialization).
+  - Attached files associated with medical records are also synced.
 
 ## Architecture
 The app follows the MVVM (Model-View-ViewModel) architecture pattern with repository abstractions:
@@ -37,10 +59,18 @@ The app follows the MVVM (Model-View-ViewModel) architecture pattern with reposi
   - `TagRepository`: Interface for tag operations
   - `MedicalRecordRepositoryImpl`: Implementation of the medical record repository
   - `TagRepositoryImpl`: Implementation of the tag repository
+  - `ProfileRepository`: Interface for profile data operations (New - uses SharedPreferences)
+  - `ProfileRepositoryImpl`: Implementation of the profile repository (New)
 
 - **DAOs**:
   - `MedicalRecordDao`: Data access for medical records
   - `TagDao`: Data access for tags
+- **Room Database**:
+  - Schema export is configured in `app/build.gradle.kts` to output to the `$projectDir/schemas` directory.
+
+### Services
+- **`WebDavService`**: Interface for WebDAV operations, such as profile and medical data synchronization.
+- **`WebDavServiceImpl`**: Implementation of `WebDavService`, handling the HTTP communication with a WebDAV server.
 
 ### ViewModels
 - `MedicalRecordViewModel`: Manages medical record CRUD operations
@@ -48,14 +78,19 @@ The app follows the MVVM (Model-View-ViewModel) architecture pattern with reposi
   - Properly synchronizes measurements and clinical data from records to its internal state
   - Handles clinical data deletion tracking
   - Maintains operation state (Idle, Loading, Saving, Success, Error)
+- `ExportViewModel`: Manages state and logic for the data export process, including filtering records for export.
 - `StatisticsViewModel`: Handles statistical analysis of records
-- `ExportViewModel`: Manages export functionality
+- `ProfileViewModel`: Manages user profile data, interacting with `ProfileRepository`. It now delegates WebDAV synchronization tasks to `WebDavService`.
+- `PinViewModel`: Manages PIN setup and authentication.
 
 ### UI Components
 - `MedicalRecordEditScreen`: Screen for adding/editing records
 - `MedicalRecordListScreen`: Screen for viewing and filtering records
 - `StatisticsScreen`: Screen for viewing statistics and insights
 - `StatisticsChart`: Component for rendering different chart types
+- `ProfileScreen`: Screen for managing user profile information (New)
+- `PinScreen`: Screen for PIN authentication.
+- `OnboardingScreen`: Multi-step screen for first-time user setup (New).
 
 ## Non-functional Requirements
 - **Performance**: The app should handle hundreds of medical records without performance degradation
@@ -83,6 +118,18 @@ The app follows the MVVM (Model-View-ViewModel) architecture pattern with reposi
 - Attach multiple files (e.g., PDFs, images) to relevant record types (Consultation, Lab Test, Imaging, Procedure).
 - **Open files (e.g., PDF, images) from external apps (like email clients) directly into Dokumed, automatically navigating to the 'New Record' screen with the file pre-attached.**
 - Add tags to records for easier categorization and searching.
+
+## User Profile
+- Users can input and save their personal medical information including:
+  - Height
+  - Weight
+  - Blood Type
+  - Known illnesses
+  - Current medications
+  - Allergies
+  - Emergency contact name and phone number
+  - Organ donor status
+- Data is saved locally using SharedPreferences, managed via the `ProfileRepository`.
 
 ## File Handling
 - Attach files (PDF, images) to records from device storage.

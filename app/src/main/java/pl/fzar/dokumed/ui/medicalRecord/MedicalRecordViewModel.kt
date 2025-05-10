@@ -314,7 +314,18 @@ class MedicalRecordViewModel(
      */
     fun deleteRecord(recordToDelete: MedicalRecord) {
         viewModelScope.launch {
-            // TODO: Implement logic to delete the record from the database
+            _recordState.value = RecordOperationState.Saving // Indicate an operation is in progress
+            try {
+                medicalRecordRepository.deleteMedicalRecord(recordToDelete)
+                // The collect block in init should automatically update _records
+                // and trigger applyFilters() if the repository flow emits the new list.
+                _recordState.value = RecordOperationState.Success // Indicate success
+                println("Record successfully deleted with ID: ${recordToDelete.id}")
+            } catch (e: Exception) {
+                // Log error and update state
+                println("Error deleting record: ${e.message}")
+                _recordState.value = RecordOperationState.Error("Failed to delete record: ${e.message}")
+            }
         }
     }
 

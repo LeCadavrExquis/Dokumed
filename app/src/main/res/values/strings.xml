@@ -56,4 +56,33 @@
     <string name="add_tag">Add tag</string>
     <string name="remove_tag">Remove tag</string>
     <string name="select_date">Select date</string>
+
+    <!-- Profile Screen -->
+    <string name="profile_title">Profile</string>
+    <string name="profile_height">Height (cm)</string>
+    <string name="profile_weight">Weight (kg)</string>
+    <string name="profile_blood_type">Blood Type</string>
+    <string name="profile_illnesses">Illnesses</string>
+    <string name="profile_medications">Medications</string>
+    <string name="profile_allergies">Allergies</string>
+    <string name="profile_emergency_contact">Emergency Contact</string>
+    <string name="profile_emergency_contact_name">Name</string>
+    <string name="profile_emergency_contact_phone">Phone</string>
+    <string name="profile_organ_donor">Organ Donor</string>
+    <string name="bottom_nav_profile">Profile</string>
+
+    <!-- Medication Reminder -->
+    <string name="profile_medication_reminder_title">Medication Reminder</string>
+    <string name="profile_medication_reminder_enable">Enable Reminder</string>
+    <string name="profile_medication_reminder_name">Medication Name</string>
+    <string name="profile_medication_reminder_dosage">Dosage</string>
+    <string name="profile_medication_reminder_time">Time (HH:MM)</string>
+
+    <!-- Notification Channel -->
+    <string name="notification_channel_medication_reminder_name">Medication Reminders</string>
+    <string name="notification_channel_medication_reminder_description">Channel for medication reminder notifications</string>
+
+    <!-- Medication Reminder Notification -->
+    <string name="medication_reminder_notification_title">Medication Reminder</string>
+    <string name="medication_reminder_notification_text">Time to take your %1$s (%2$s).</string>
 </resources>

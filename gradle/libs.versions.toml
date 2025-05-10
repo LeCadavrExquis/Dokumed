@@ -1,4 +1,3 @@
-
 [versions]
 agp = "8.9.2"
 kotlin = "2.1.20"
@@ -8,6 +7,11 @@ junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 kotlinxDatetime = "0.6.2"
 kotlinxSerialization = "1.8.1"
+ktorClientCio = "2.3.10"
+ktorClientContentNegotiation = "2.3.10"
+ktorClientCore = "2.3.10"
+ktorClientAuth = "2.3.10" # Added Ktor client auth version
+ktorSerializationKotlinxJson = "2.3.10"
 letsPlotCommon = "4.6.2"
 letsPlotKotlinKernel = "4.8.0"
 letsPlotKotlin = "4.10.0"
@@ -17,10 +21,14 @@ composeBom = "2025.04.01"
 lifecycleViewmodelCompose = "2.8.7"
 mpandroidchart = "v3.1.0"
 navigationCompose = "2.8.9"
+opencsv = "5.9"
 roomRuntime = "2.7.1"
 ksp = "2.1.20-2.0.0"
+androidxBiometric = "1.2.0-alpha05"
+securityCrypto = "1.1.0-alpha07"
 
 [libraries]
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
 koin-core = { module = "io.insert-koin:koin-core", version = "3.5.3" }
 koin-android = { module = "io.insert-koin:koin-android", version = "3.5.3" }
 koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version = "3.5.3" }
@@ -45,7 +53,14 @@ androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktorClientCio" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktorClientContentNegotiation" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktorClientCore" }
+ktor-client-auth = { module = "io.ktor:ktor-client-auth", version.ref = "ktorClientAuth" } # Added Ktor client auth library
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktorSerializationKotlinxJson" }
 mpandroidchart = { module = "com.github.PhilJay:MPAndroidChart", version.ref = "mpandroidchart" }
+androidx-biometric = { group = "androidx.biometric", name = "biometric-ktx", version.ref = "androidxBiometric" }
+opencsv = { module = "com.opencsv:opencsv", version.ref = "opencsv" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

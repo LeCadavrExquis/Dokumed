@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "pl.fzar.dokumed"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -21,6 +21,9 @@ android {
             annotationProcessorOptions {
                 arguments += mapOf("room.schemaLocation" to "$projectDir/schemas")
             }
+        }
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
         }
     }
 
@@ -68,6 +71,16 @@ dependencies {
 
     implementation(libs.kotlinx.datetime)
     implementation(libs.mpandroidchart)
+    implementation(libs.androidx.security.crypto)
+    implementation(libs.androidx.biometric)
+
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.client.auth) // Added Ktor client auth
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.opencsv) // Added OpenCSV
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

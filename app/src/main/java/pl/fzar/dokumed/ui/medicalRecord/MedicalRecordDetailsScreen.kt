@@ -164,24 +164,6 @@ fun MedicalRecordDetailsScreen(
     }
 }
 
-@Composable
-fun OpenFileButton(filePath: String, mimeType: String, context: Context) {
-    // Sprawdzamy, czy MIME typ jest wspierany przez urządzenie
-    val mime = mimeType.ifEmpty { "application/octet-stream" } // domyślny MIME typ
-    val fileUri = "file://$filePath".toUri()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-    ) {
-        IconButton(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = { openFileIntent(context, filePath, mime) }
-        ) {
-            Text(text = "Otwórz plik")
-        }
-    }
-}
-
 fun openFileIntent(context: Context, filePath: String, mimeType: String) {
     // val uri = "file://$filePath".toUri() // Old way - causes FileUriExposedException
     val file = java.io.File(filePath)

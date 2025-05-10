@@ -11,6 +11,11 @@ import kotlin.uuid.Uuid
  * Repository interface for medical records operations
  */
 interface MedicalRecordRepository {
+
+    /**
+     * Get all medical records with all details (tags, measurements, clinical data, etc.)
+     */
+    suspend fun getAllRecordsWithDetails(): List<MedicalRecord>
     /**
      * Get a flow of all medical records with their tags
      */
@@ -84,9 +89,16 @@ interface MedicalRecordRepository {
         clinicalData: List<ClinicalData>,
         clinicalDataToDelete: Set<Uuid>
     )
+
+    /**
+     * Deletes a specific clinical data item (both file and DB entry).
+     */
+    suspend fun deleteClinicalDataItem(clinicalDataId: Uuid, filePath: String?)
 }
 
 object DummyMedicalRecordRepository : MedicalRecordRepository {
+    override suspend fun getAllRecordsWithDetails(): List<MedicalRecord> { return emptyList() }
+
     override fun getAllRecords(): Flow<List<MedicalRecordWithTags>> = kotlinx.coroutines.flow.flowOf(emptyList())
     override suspend fun getMedicalRecordById(id: Uuid): MedicalRecord? = null
     override suspend fun insertMedicalRecord(record: MedicalRecord) {}
@@ -100,4 +112,5 @@ object DummyMedicalRecordRepository : MedicalRecordRepository {
     override suspend fun getClinicalDataForRecord(recordId: Uuid): List<ClinicalData> = emptyList()
     override suspend fun insertMedicalRecordWithDetails(record: MedicalRecord, measurements: List<Measurement>, clinicalData: List<ClinicalData>) {}
     override suspend fun updateMedicalRecordWithDetails(record: MedicalRecord, measurements: List<Measurement>, clinicalData: List<ClinicalData>, clinicalDataToDelete: Set<Uuid>) {}
+    override suspend fun deleteClinicalDataItem(clinicalDataId: Uuid, filePath: String?) {}
 }

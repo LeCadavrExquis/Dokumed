@@ -61,4 +61,11 @@ interface MedicalRecordDao {
 
     @Query("SELECT * FROM clinical_data WHERE medicalRecordId IN (:recordIds)")
     suspend fun getClinicalDataForRecords(recordIds: Set<Uuid>): List<ClinicalDataEntity>
+
+    @Transaction
+    @Query("SELECT * FROM clinical_data WHERE id IN (:ids)")
+    suspend fun getClinicalDataByIds(ids: Set<Uuid>): List<ClinicalDataEntity>
+
+    @Query("DELETE FROM clinical_data WHERE id = :id")
+    suspend fun deleteClinicalDataById(id: Uuid)
 }

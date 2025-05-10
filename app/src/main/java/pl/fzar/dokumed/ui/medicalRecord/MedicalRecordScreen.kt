@@ -120,7 +120,7 @@ fun MedicalRecordsScreen(
                 if (showFilterSheet) {
                     ModalBottomSheet(onDismissRequest = { showFilterSheet = false }) {
                         FilterBottomSheet(
-                            allTypes = MedicalRecordType.values().toList(),
+                            allTypes = MedicalRecordType.entries,
                             selectedTypes = selectedTypes,
                             onTypesChange = onTypesChange,
                             dateFrom = dateFrom,

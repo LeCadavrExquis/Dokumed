@@ -38,6 +38,11 @@
     <string name="bottom_nav_records">Wpisy</string>
     <string name="bottom_nav_statistics">Statystyki</string>
     <string name="bottom_nav_export">Eksport</string>
+    <string name="delete_record_content_description">Usuń wpis</string>
+    <string name="deletion_confirmation_title">Potwierdzenie usunięcia</string>
+    <string name="deletion_confirmation_message">Czy na pewno chcesz usunąć ten wpis? Tej akcji nie można cofnąć.</string>
+    <string name="delete_button_text">Usuń</string>
+    <string name="cancel_button_text">Anuluj</string>
     <string name="edit_record">Edytuj wpis</string>
     <string name="delete_record">Usuń wpis</string>
     <string name="save">Zapisz</string>
