@@ -81,6 +81,13 @@ fun ProfileScreen(
             ) {
                 Text("Cloud Sync Settings")
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = { navController.navigate("panicButtonSettings") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Panic Button Settings")
+            }
             // Removed the general "Save" button as saving is handled in specific screens
         }
     }

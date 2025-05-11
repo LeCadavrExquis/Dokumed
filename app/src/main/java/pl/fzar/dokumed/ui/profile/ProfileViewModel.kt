@@ -217,6 +217,14 @@ class ProfileViewModel(
         }
     }
 
+    fun updateEmergencyContact(name: String, phone: String) {
+        _uiState.value = _uiState.value.copy(
+            emergencyContactName = name,
+            emergencyContactPhone = phone
+        )
+        saveProfileData() // Persist changes
+    }
+
     fun updateName(name: String) {
         _uiState.value = _uiState.value.copy(medicationName = name)
         // Consider if immediate save is needed or if it's part of a larger "saveProfileData" call

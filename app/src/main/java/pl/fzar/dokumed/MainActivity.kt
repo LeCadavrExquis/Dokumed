@@ -37,6 +37,7 @@ import pl.fzar.dokumed.ui.profile.ProfileViewModel
 import pl.fzar.dokumed.ui.profile.ProfileEditScreen // Added import
 import pl.fzar.dokumed.ui.profile.MedicationReminderScreen // Added import
 import pl.fzar.dokumed.ui.profile.CloudSyncScreen // Added import
+import pl.fzar.dokumed.ui.profile.PanicButtonSettingsScreen // Added import
 import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordDetailsScreen
 import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordEditScreen
 import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordViewModel
@@ -286,6 +287,12 @@ class MainActivity : FragmentActivity() {
                             }
                             composable("cloudSync") { // Route for CloudSyncScreen
                                 CloudSyncScreen(
+                                    navController = navController,
+                                    viewModel = profileViewModel
+                                )
+                            }
+                            composable("panicButtonSettings") { // Route for PanicButtonSettingsScreen
+                                PanicButtonSettingsScreen(
                                     navController = navController,
                                     viewModel = profileViewModel
                                 )

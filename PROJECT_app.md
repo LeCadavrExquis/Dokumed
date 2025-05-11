@@ -159,6 +159,7 @@ Dokumed is a mobile application for managing medical records securely and effici
 -   **Onboarding process shown only on first application launch.**
 -   **Optional PIN setup during the onboarding process.**
 -   Import medical documents via sharing intents.
+-   **Panic Button Widget**: Allows users to place a widget on their home screen that, when tapped, immediately calls a pre-configured emergency contact number.
 
 ## Non-functional Requirements
 -   Security: PIN protection for app access (if enabled), data encryption at rest.

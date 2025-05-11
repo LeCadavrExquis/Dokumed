@@ -85,4 +85,18 @@
     <!-- Medication Reminder Notification -->
     <string name="medication_reminder_notification_title">Medication Reminder</string>
     <string name="medication_reminder_notification_text">Time to take your %1$s (%2$s).</string>
+
+    <!-- Panic Button -->
+    <string name="panic_button_settings_title">Panic Button Settings</string>
+    <string name="action_back">Back</string>
+    <string name="panic_button_settings_description">Configure the emergency contact number for the Panic Button widget. This number will be used to send an SMS and make a call when the panic button is activated.</string>
+    <string name="action_save_emergency_contact">Save Emergency Contact</string>
+    <string name="action_add_panic_widget">Add Panic Button Widget</string>
+    <string name="panic_widget_add_manually_unsupported">To add the widget, please long-press on your home screen and select it from the widget list. Your launcher may not support direct pinning.</string>
+    <string name="panic_button_permission_rationale">The Panic Button requires CALL_PHONE and SEND_SMS permissions to function correctly. Please grant these permissions.</string>
+    <string name="toast_emergency_contact_saved">Emergency contact saved.</string>
+    <string name="toast_permissions_denied_contact_not_saved">Permissions denied. Emergency contact not saved.</string>
+    <string name="toast_widget_pin_failed">Could not request to add widget. Ensure your launcher supports this feature.</string>
+    <string name="toast_save_number_first">Please save an emergency number first.</string>
+    <string name="toast_grant_permissions_first">Please grant required permissions first.</string>
 </resources>
