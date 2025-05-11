@@ -1,5 +1,7 @@
 package pl.fzar.dokumed.security
 
+import android.app.Application
+import android.content.Context
 import android.content.SharedPreferences
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
@@ -12,14 +14,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
+import org.koin.core.component.inject // Ensure inject is imported
 
-private const val PIN_KEY = "app_pin"
+// private const val PIN_KEY = "app_pin" // No longer needed for storing actual PIN
 private const val BIOMETRIC_ENABLED_KEY = "biometric_enabled"
+private const val TEMP_PIN_PREF_KEY = "temp_pin" // For confirming PIN during setup
 
-class PinViewModel : ViewModel(), KoinComponent {
+class PinViewModel(application: Application) : ViewModel(), KoinComponent {
 
-    private val encryptedPrefs: SharedPreferences by inject()
+    private val prefs: SharedPreferences = application.getSharedPreferences("DokumedPrefs", Context.MODE_PRIVATE)
+    private val keystoreHelper: KeystoreHelper by inject() // Koin Injected KeystoreHelper
 
     private val _pinState = MutableStateFlow<PinScreenState>(PinScreenState.Loading)
     val pinState: StateFlow<PinScreenState> = _pinState.asStateFlow()
@@ -35,31 +39,60 @@ class PinViewModel : ViewModel(), KoinComponent {
 
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
-    
-    private var isSettingUpPin = false
+
+    private var isSettingUpPin = false // Tracks if the current flow is for initial PIN setup
+
+    private val _isPinEnabledFlow = MutableStateFlow(false)
+    val isPinEnabledFlow: StateFlow<Boolean> = _isPinEnabledFlow.asStateFlow()
 
     init {
-        checkPinStatus()
-    }
+        // User's preference to use a PIN (e.g., from onboarding or settings)
+        val userWantsPinEnabled = prefs.getBoolean("is_pin_enabled", false)
+        _isPinEnabledFlow.value = userWantsPinEnabled
 
-    private fun checkPinStatus() {
-        viewModelScope.launch {
-            val storedPin = encryptedPrefs.getString(PIN_KEY, null)
-            if (storedPin == null) {
+        if (userWantsPinEnabled) {
+            if (keystoreHelper.isPinSet()) {
+                _pinState.value = PinScreenState.EnterPin
+                isSettingUpPin = false
+            } else {
+                // User wants PIN, but it's not in Keystore (e.g., first time, data clear)
                 _pinState.value = PinScreenState.SetupPin
                 isSettingUpPin = true
-            } else {
+            }
+        } else {
+            // User has not enabled PIN feature. If PinScreen is shown (e.g. during onboarding),
+            // it should allow setting up a new PIN.
+            _pinState.value = PinScreenState.SetupPin // Default to allowing setup
+            isSettingUpPin = true // Assume setup context if PIN isn't enabled yet
+        }
+        // checkPinStatus() // Consider if this is needed or if init logic is sufficient
+    }
+
+    // This function might be redundant if init logic is comprehensive.
+    // It was originally for checking PIN_KEY in prefs, now KeystoreHelper.isPinSet() is used.
+    // It also triggers biometrics. Review its necessity.
+    private fun checkPinStatus() {
+        viewModelScope.launch {
+            val userWantsPin = _isPinEnabledFlow.value
+            if (userWantsPin && keystoreHelper.isPinSet()) {
                 _pinState.value = PinScreenState.EnterPin
                 isSettingUpPin = false
                 if (isBiometricAuthEnabled() && canAuthenticateWithBiometrics()) {
                     _showBiometricPrompt.value = true
                 }
+            } else if (userWantsPin && !keystoreHelper.isPinSet()){
+                _pinState.value = PinScreenState.SetupPin
+                isSettingUpPin = true
+            } else {
+                // User doesn't want PIN, or it's part of onboarding to set one up.
+                _pinState.value = PinScreenState.SetupPin
+                isSettingUpPin = true
             }
         }
     }
 
     fun onPinDigitEntered(digit: String) {
-        if (_pinInput.value.length < 6) {
+        if (_pinInput.value.length < 6) { // Assuming MAX_PIN_LENGTH is 6, make this a const
             _pinInput.value += digit
         }
     }
@@ -72,63 +105,92 @@ class PinViewModel : ViewModel(), KoinComponent {
 
     fun onPinConfirmClicked() {
         val currentPin = _pinInput.value
-        if (currentPin.length < 4) {
+        if (currentPin.length < 4) { // Assuming MIN_PIN_LENGTH is 4, make this a const
             _toastMessage.value = "PIN must be at least 4 digits"
             return
         }
 
-        when (_pinState.value) {
-            is PinScreenState.SetupPin, is PinScreenState.ConfirmPin -> {
-                if (isSettingUpPin) {
-                    if (_pinState.value is PinScreenState.SetupPin) {
-                        // First time entering PIN during setup
-                        encryptedPrefs.edit().putString("temp_pin", currentPin).apply()
-                        _pinState.value = PinScreenState.ConfirmPin
-                        _pinInput.value = ""
-                        _toastMessage.value = "Confirm your PIN"
-                    } else {
-                        // Confirming PIN
-                        val tempPin = encryptedPrefs.getString("temp_pin", null)
-                        if (tempPin == currentPin) {
-                            setPin(currentPin) // Use the new setPin method
-                            _pinState.value = PinScreenState.PinSetSuccessfully
-                            _toastMessage.value = "PIN set successfully!"
-                            // Optionally ask to enable biometrics here
-                             _pinState.value = PinScreenState.AskBiometrics // Transition to ask for biometrics
-                        } else {
-                            _toastMessage.value = "PINs do not match. Try again."
-                            _pinState.value = PinScreenState.SetupPin
-                            encryptedPrefs.edit().remove("temp_pin").apply()
-                        }
-                        _pinInput.value = ""
-                    }
-                }
+        when (val currentState = _pinState.value) {
+            is PinScreenState.SetupPin -> {
+                prefs.edit().putString(TEMP_PIN_PREF_KEY, currentPin).apply()
+                _pinState.value = PinScreenState.ConfirmPin
+                _pinInput.value = ""
+                _toastMessage.value = "Confirm your PIN"
             }
-            is PinScreenState.EnterPin -> {
-                val storedPin = encryptedPrefs.getString(PIN_KEY, null)
-                if (storedPin == currentPin) {
-                    _navigateToMain.value = true
+            is PinScreenState.ConfirmPin -> {
+                val tempPin = prefs.getString(TEMP_PIN_PREF_KEY, null)
+                if (tempPin == currentPin) {
+                    keystoreHelper.setPin(currentPin) // Securely store the PIN
+                    prefs.edit().remove(TEMP_PIN_PREF_KEY).apply()
+
+                    _isPinEnabledFlow.value = true // User has now enabled and set up a PIN
+                    prefs.edit().putBoolean("is_pin_enabled", true).apply()
+                    isSettingUpPin = false
+
+                    _pinState.value = PinScreenState.PinSetSuccessfully
+                    _toastMessage.value = "PIN set successfully!"
+                    _pinState.value = PinScreenState.AskBiometrics // Proceed to ask for biometrics
                 } else {
-                    _toastMessage.value = "Incorrect PIN"
+                    _toastMessage.value = "PINs do not match. Try again."
+                    _pinState.value = PinScreenState.SetupPin // Go back to initial setup
+                    prefs.edit().remove(TEMP_PIN_PREF_KEY).apply()
                     _pinInput.value = ""
                 }
             }
-            else -> { /* No action needed for other states */ }
+            is PinScreenState.EnterPin -> {
+                if (keystoreHelper.checkPin(currentPin)) {
+                    _navigateToMain.value = true
+                } else {
+                    _toastMessage.value = "Incorrect PIN"
+                    _pinInput.value = "" // Clear input after failed attempt
+                }
+            }
+            else -> { /* No action for Loading, AskBiometrics, PinSetSuccessfully */ }
         }
     }
-    
+
+    // This method is called when PinViewModel's setPin is directly invoked (e.g. from tests or specific flows).
+    // Typically, onPinConfirmClicked handles the full user-driven setup flow.
     fun setPin(pin: String) {
-        viewModelScope.launch {
-            encryptedPrefs.edit()
-                .putString(PIN_KEY, pin)
-                .remove("temp_pin") // Clean up temporary PIN if it exists
-                .apply()
-            // Update internal state if needed, e.g., to reflect PIN is now set
-            // For onboarding, this might mean transitioning to the next step or enabling features.
-            // If called from a settings screen, it might just confirm success.
-            // For now, we assume the primary action is saving the PIN.
-            // The existing logic in onPinConfirmClicked already handles state transitions.
+        keystoreHelper.setPin(pin)
+        _isPinEnabledFlow.value = true
+        prefs.edit().putBoolean("is_pin_enabled", true).apply()
+        isSettingUpPin = false
+        _pinState.value = PinScreenState.PinSetSuccessfully
+        // Consider if navigation or biometric prompt should follow here too.
+    }
+
+    // This method is for direct PIN checking, e.g., from settings or other parts of the app.
+    // The onPinConfirmClicked handles PIN checking during login flow.
+    fun checkPin(pin: String): Boolean {
+        val isCorrect = keystoreHelper.checkPin(pin)
+        if (isCorrect) {
+            // This method is a direct check, navigation/state change should be handled by caller
+            // _navigateToMain.value = true // Avoid direct navigation from a simple check method
+        } else {
+            _toastMessage.value = "Invalid PIN (from checkPin)" // Differentiate if needed
+            _pinInput.value = "" // Clear input after failed attempt
         }
+        return isCorrect
+    }
+
+    fun skipPinSetup() {
+        _isPinEnabledFlow.value = false
+        prefs.edit().putBoolean("is_pin_enabled", false).apply()
+        isSettingUpPin = false
+        // This signals that PIN is not active. MainActivity observing isPinEnabledFlow will handle navigation.
+        _navigateToMain.value = true // Or a specific callback for onboarding completion
+    }
+
+    fun removePin() {
+        keystoreHelper.removePin()
+        _isPinEnabledFlow.value = false
+        prefs.edit().putBoolean("is_pin_enabled", false).apply()
+        prefs.edit().putBoolean(BIOMETRIC_ENABLED_KEY, false).apply() // Also disable biometrics if PIN is removed
+        _pinState.value = PinScreenState.SetupPin // If PIN screen is shown again, default to setup
+        isSettingUpPin = true
+        _pinInput.value = ""
+        _toastMessage.value = "PIN and biometrics (if enabled) have been removed"
     }
 
     fun onBiometricAuthSucceeded() {
@@ -140,12 +202,11 @@ class PinViewModel : ViewModel(), KoinComponent {
     fun onBiometricAuthFailed(errorMsg: String? = "Biometric authentication failed") {
         _showBiometricPrompt.value = false
         _toastMessage.value = errorMsg
-        // Fallback to PIN entry if not setting up
-        if (!isSettingUpPin) {
-             _pinState.value = PinScreenState.EnterPin
+        if (!isSettingUpPin && _isPinEnabledFlow.value && keystoreHelper.isPinSet()) {
+            _pinState.value = PinScreenState.EnterPin // Fallback to PIN entry if PIN is set
         }
     }
-    
+
     fun enableBiometricAuthentication(activity: FragmentActivity, enable: Boolean) {
         if (enable && canAuthenticateWithBiometrics(activity)) {
             val promptInfo = BiometricPrompt.PromptInfo.Builder()
@@ -158,48 +219,49 @@ class PinViewModel : ViewModel(), KoinComponent {
                 object : BiometricPrompt.AuthenticationCallback() {
                     override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                         super.onAuthenticationSucceeded(result)
-                        encryptedPrefs.edit().putBoolean(BIOMETRIC_ENABLED_KEY, true).apply()
+                        prefs.edit().putBoolean(BIOMETRIC_ENABLED_KEY, true).apply()
                         _toastMessage.value = "Biometric authentication enabled"
-                        _navigateToMain.value = true // Proceed to main app
+                        _navigateToMain.value = true
                     }
 
                     override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                         super.onAuthenticationError(errorCode, errString)
                         _toastMessage.value = "Biometric setup failed: $errString"
-                         _navigateToMain.value = true // Proceed to main app even if biometrics fail to enable
+                        _navigateToMain.value = true
                     }
 
                     override fun onAuthenticationFailed() {
                         super.onAuthenticationFailed()
                         _toastMessage.value = "Biometric authentication failed"
-                         _navigateToMain.value = true // Proceed to main app
+                        _navigateToMain.value = true
                     }
                 })
             biometricPrompt.authenticate(promptInfo)
         } else if (!enable) {
-            encryptedPrefs.edit().putBoolean(BIOMETRIC_ENABLED_KEY, false).apply()
+            prefs.edit().putBoolean(BIOMETRIC_ENABLED_KEY, false).apply()
             _toastMessage.value = "Biometric authentication disabled"
-            _navigateToMain.value = true // Proceed to main app
+            _navigateToMain.value = true
         } else {
-             _toastMessage.value = "Biometrics not available or not enrolled."
-             _navigateToMain.value = true // Proceed to main app
+            _toastMessage.value = "Biometrics not available or not enrolled."
+            _navigateToMain.value = true
         }
-         _pinState.value = PinScreenState.Loading // Reset state or navigate as needed
-         checkPinStatus() // Re-check status, which might lead to EnterPin or navigate
+        // After this flow, navigateToMain is true, so MainActivity should handle navigation.
+        // No need to change _pinState here as this is usually a side-flow from AskBiometrics or settings.
     }
 
-
     fun attemptBiometricAuthentication(activity: FragmentActivity) {
-        if (!canAuthenticateWithBiometrics(activity)) {
-            _toastMessage.value = "Biometric authentication not available or not set up."
-            _pinState.value = PinScreenState.EnterPin // Fallback to PIN
+        if (!isBiometricAuthEnabled() || !canAuthenticateWithBiometrics(activity)) {
+            _toastMessage.value = "Biometric authentication not enabled or not available."
+            if (_isPinEnabledFlow.value && keystoreHelper.isPinSet()) {
+                 _pinState.value = PinScreenState.EnterPin // Fallback to PIN if it's set up
+            }
             return
         }
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
             .setTitle("Biometric Login")
             .setSubtitle("Log in using your biometric credential")
-            .setNegativeButtonText("Use PIN") // Allows user to cancel and use PIN
+            .setNegativeButtonText("Use PIN")
             .build()
 
         val biometricPrompt = BiometricPrompt(activity, ContextCompat.getMainExecutor(activity),
@@ -211,12 +273,13 @@ class PinViewModel : ViewModel(), KoinComponent {
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     super.onAuthenticationError(errorCode, errString)
-                    // Don't show error if user cancelled to use PIN
                     if (errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON && errorCode != BiometricPrompt.ERROR_USER_CANCELED) {
                         onBiometricAuthFailed("Authentication error: $errString")
                     } else {
-                         _showBiometricPrompt.value = false // Hide prompt if cancelled
-                         _pinState.value = PinScreenState.EnterPin // Ensure PIN entry is shown
+                        _showBiometricPrompt.value = false
+                        if (_isPinEnabledFlow.value && keystoreHelper.isPinSet()) {
+                           _pinState.value = PinScreenState.EnterPin // Fallback to PIN
+                        }
                     }
                 }
 
@@ -228,20 +291,20 @@ class PinViewModel : ViewModel(), KoinComponent {
         biometricPrompt.authenticate(promptInfo)
     }
 
-
     private fun isBiometricAuthEnabled(): Boolean {
-        return encryptedPrefs.getBoolean(BIOMETRIC_ENABLED_KEY, false)
+        // Biometrics should only be considered enabled if a PIN is also set in the keystore.
+        return prefs.getBoolean(BIOMETRIC_ENABLED_KEY, false) && keystoreHelper.isPinSet()
     }
 
     private fun canAuthenticateWithBiometrics(activity: FragmentActivity? = null): Boolean {
-        val context = activity ?: return false // Requires activity context for BiometricManager
+        val context = activity ?: return false
         val biometricManager = BiometricManager.from(context)
         return when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK)) {
             BiometricManager.BIOMETRIC_SUCCESS -> true
             else -> false
         }
     }
-    
+
     fun consumeToast() {
         _toastMessage.value = null
     }
@@ -249,7 +312,7 @@ class PinViewModel : ViewModel(), KoinComponent {
     fun consumeNavigation() {
         _navigateToMain.value = false
     }
-    
+
     fun hideBiometricPrompt() {
         _showBiometricPrompt.value = false
     }

@@ -1,6 +1,7 @@
 package pl.fzar.dokumed
 
 import MedicalRecordsScreen
+import android.content.Context // Added for SharedPreferences
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -33,6 +34,9 @@ import pl.fzar.dokumed.ui.export.ExportScreen
 import pl.fzar.dokumed.ui.export.ExportViewModel
 import pl.fzar.dokumed.ui.profile.ProfileScreen
 import pl.fzar.dokumed.ui.profile.ProfileViewModel
+import pl.fzar.dokumed.ui.profile.ProfileEditScreen // Added import
+import pl.fzar.dokumed.ui.profile.MedicationReminderScreen // Added import
+import pl.fzar.dokumed.ui.profile.CloudSyncScreen // Added import
 import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordDetailsScreen
 import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordEditScreen
 import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordViewModel
@@ -46,20 +50,32 @@ import kotlin.uuid.Uuid
 class MainActivity : FragmentActivity() {
     // State to trigger navigation after intent processing
     private var pendingNavigation by mutableStateOf<String?>(null)
-    private var isAuthenticated by mutableStateOf(false) // New state for authentication
-    private var isOnboardingCompleted by mutableStateOf(false) // New state for onboarding
+    private var isAuthenticated by mutableStateOf(false)
+    private var isOnboardingCompleted by mutableStateOf(false) // Existing state, will be initialized from prefs
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    // Initialize SharedPreferences
+    private val prefs by lazy {
+        getSharedPreferences("DokumedPrefs", Context.MODE_PRIVATE)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Load onboarding completion state from SharedPreferences
+        isOnboardingCompleted = prefs.getBoolean("onboarding_completed", false)
+
         // Handle the intent that started the activity
         handleIntent(intent)
 
         setContent {
             val pinViewModel: PinViewModel = koinViewModel()
+            // Assuming PinViewModel exposes isPinEnabledFlow: StateFlow<Boolean>
+            // This flow should reflect whether a PIN is configured and persisted.
+            val isPinEnabled by pinViewModel.isPinEnabledFlow.collectAsState() // Added this line
+
             val medicalRecordViewModel: MedicalRecordViewModel = koinViewModel()
-            val profileViewModel: ProfileViewModel = koinViewModel() // Instantiate ProfileViewModel
+            val profileViewModel: ProfileViewModel = koinViewModel()
 
             DokumedTheme {
                 if (!isOnboardingCompleted) {
@@ -67,17 +83,22 @@ class MainActivity : FragmentActivity() {
                         pinViewModel = pinViewModel,
                         profileViewModel = profileViewModel,
                         onFinishOnboarding = {
+                            // This callback is invoked after the user completes the onboarding flow,
+                            // including making a decision about PIN setup (handled within OnboardingScreen & PinViewModel).
                             isOnboardingCompleted = true
-                            // Here you would typically save this state to SharedPreferences
+                            // Save onboarding completion state to SharedPreferences
+                            prefs.edit().putBoolean("onboarding_completed", true).apply()
                         }
                     )
-                } else if (!isAuthenticated) {
+                } else if (isPinEnabled && !isAuthenticated) { // Modified condition
+                    // Show PIN screen only if a PIN is enabled and the user is not yet authenticated
                     PinScreen(
                         pinViewModel = pinViewModel,
                         activity = this as FragmentActivity,
                         onNavigateToMain = { isAuthenticated = true }
                     )
                 } else {
+                    // Onboarding is completed, and either PIN is not enabled or user is authenticated
                     val navController = rememberNavController()
 
                     // Main layout with navigation
@@ -249,7 +270,25 @@ class MainActivity : FragmentActivity() {
                                 )
                             }
                             composable(BottomNavItem.Profile.route) {
-                                ProfileScreen()
+                                ProfileScreen(navController, profileViewModel)
+                            }
+                            composable("profileEdit") { // Route for ProfileEditScreen
+                                ProfileEditScreen(
+                                    navController = navController,
+                                    viewModel = profileViewModel
+                                )
+                            }
+                            composable("medicationReminders") { // Route for MedicationReminderScreen
+                                MedicationReminderScreen(
+                                    navController = navController,
+                                    viewModel = profileViewModel
+                                )
+                            }
+                            composable("cloudSync") { // Route for CloudSyncScreen
+                                CloudSyncScreen(
+                                    navController = navController,
+                                    viewModel = profileViewModel
+                                )
                             }
                         }
                     }

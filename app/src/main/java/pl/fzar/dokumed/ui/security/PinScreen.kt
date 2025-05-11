@@ -136,7 +136,9 @@ private fun PinInputView(
             }
         }
         Row {
-            Spacer(Modifier.weight(1f)) // Empty space to align 0 and backspace
+            // Placeholder for the first column to align "0" in the center
+            Box(modifier = Modifier.padding(4.dp).size(70.dp))
+
             Button(
                 onClick = { pinViewModel.onPinDigitEntered("0") },
                 modifier = Modifier

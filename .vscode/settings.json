@@ -1,3 +1,4 @@
 {
-  "editor.definitionLinkOpensInPeek": false
+  "editor.definitionLinkOpensInPeek": false,
+  "java.configuration.updateBuildConfiguration": "interactive"
 }

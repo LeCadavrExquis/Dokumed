@@ -5,8 +5,7 @@
 # Dokumed App Documentation
 
 ## Overview
-The Dokumed app is an Android *   Fixed bug where clinical data was not re-inserted during medical record updates.
-*   Ensured medical record updates (including related data like measurements, clinical data, and tags) are performed within a database transaction to guarantee atomicity and prevent partial data loss on errors.pplication for managing medical records. It allows users to store, categorize, search, and analyze their medical history.
+The Dokumed app is an Android application for managing medical records. It allows users to store, categorize, search, and analyze their medical history.
 
 ## Main Features
 - Record management (add, edit, delete)
@@ -17,18 +16,19 @@ The Dokumed app is an Android *   Fixed bug where clinical data was not re-inser
   - Export selected medical records, associated measurements (grouped by description into separate CSVs), and attached files into a single ZIP archive.
   - Option to send the exported ZIP archive via email after successful export.
 - User Profile Management
-  - Add and edit personal medical information: height, weight, blood type, illnesses, medications, allergies.
-  - Store emergency contact information (name and phone number).
-  - Record organ donor status.
+  - View personal medical information: height, weight, blood type, illnesses, medications, allergies.
+  - View emergency contact information (name and phone number).
+  - View organ donor status.
+  - Edit profile details, medication reminders, and cloud sync settings on separate, dedicated screens.
   - Profile data is stored securely using SharedPreferences.
-  - Allow users to set reminders for medications, including time, medication name, and dosage.
+  - Allow users to set reminders for medications, including time, medication name, and dosage (managed in `MedicationReminderScreen`).
 - **Onboarding Carousel**:
   - Displayed on the first app launch.
   - Informs the user about the app's purpose and main features.
   - Guides the user through setting up a mandatory PIN for app security.
   - Optionally allows the user to input initial profile information (can be skipped).
 - **Cloud Synchronization (WebDAV)**:
-  - Users can configure WebDAV server credentials (URL, username, password) in the Profile screen.
+  - Users can configure WebDAV server credentials (URL, username, password) in the `CloudSyncScreen`.
   - Synchronization is optional and independent of local storage.
   - Medical records are exported in CSV format.
   - Profile information is exported in JSON format (using Kotlinx Serialization).
@@ -80,7 +80,7 @@ The app follows the MVVM (Model-View-ViewModel) architecture pattern with reposi
   - Maintains operation state (Idle, Loading, Saving, Success, Error)
 - `ExportViewModel`: Manages state and logic for the data export process, including filtering records for export.
 - `StatisticsViewModel`: Handles statistical analysis of records
-- `ProfileViewModel`: Manages user profile data, interacting with `ProfileRepository`. It now delegates WebDAV synchronization tasks to `WebDavService`.
+- `ProfileViewModel`: Manages user profile data, interacting with `ProfileRepository`. It now delegates WebDAV synchronization tasks to `WebDavService`. Its state is used by `ProfileScreen`, `ProfileEditScreen`, `MedicationReminderScreen`, and `CloudSyncScreen`.
 - `PinViewModel`: Manages PIN setup and authentication.
 
 ### UI Components
@@ -88,7 +88,10 @@ The app follows the MVVM (Model-View-ViewModel) architecture pattern with reposi
 - `MedicalRecordListScreen`: Screen for viewing and filtering records
 - `StatisticsScreen`: Screen for viewing statistics and insights
 - `StatisticsChart`: Component for rendering different chart types
-- `ProfileScreen`: Screen for managing user profile information (New)
+- `ProfileScreen`: Screen for displaying user profile information and providing navigation to `ProfileEditScreen`, `MedicationReminderScreen`, and `CloudSyncScreen`.
+- `ProfileEditScreen`: Screen for editing general user profile information (New).
+- `MedicationReminderScreen`: Screen for managing medication reminder settings (New).
+- `CloudSyncScreen`: Screen for managing WebDAV cloud synchronization settings (New).
 - `PinScreen`: Screen for PIN authentication.
 - `OnboardingScreen`: Multi-step screen for first-time user setup (New).
 
@@ -120,7 +123,7 @@ The app follows the MVVM (Model-View-ViewModel) architecture pattern with reposi
 - Add tags to records for easier categorization and searching.
 
 ## User Profile
-- Users can input and save their personal medical information including:
+- Users can view their personal medical information including:
   - Height
   - Weight
   - Blood Type
@@ -129,6 +132,9 @@ The app follows the MVVM (Model-View-ViewModel) architecture pattern with reposi
   - Allergies
   - Emergency contact name and phone number
   - Organ donor status
+- Users can edit these details in a dedicated `ProfileEditScreen`.
+- Medication reminders (enable, name, dosage, time) can be managed in `MedicationReminderScreen`.
+- WebDAV cloud sync settings (URL, username, password) can be managed in `CloudSyncScreen`.
 - Data is saved locally using SharedPreferences, managed via the `ProfileRepository`.
 
 ## File Handling
@@ -138,3 +144,33 @@ The app follows the MVVM (Model-View-ViewModel) architecture pattern with reposi
 
 ## Data Visualization
 - View trends and charts for specific measurement types over time (placeholder/future feature).
+
+# Dokumed Application
+
+## Brief Description
+Dokumed is a mobile application for managing medical records securely and efficiently.
+
+## Main Features
+-   Secure storage of medical records.
+-   Categorization and tagging of records.
+-   Data export functionality.
+-   Statistical analysis of medical data.
+-   User profile management.
+-   **Onboarding process shown only on first application launch.**
+-   **Optional PIN setup during the onboarding process.**
+-   Import medical documents via sharing intents.
+
+## Non-functional Requirements
+-   Security: PIN protection for app access (if enabled), data encryption at rest.
+-   Performance: Smooth UI, quick record retrieval.
+-   Usability: Intuitive interface for managing medical records.
+
+## Architecture Overview
+-   MVVM (Model-View-ViewModel) architecture pattern.
+-   Room for local database storage.
+-   Koin for dependency injection.
+-   Jetpack Compose for UI.
+-   Coroutines for asynchronous operations.
+-   **SharedPreferences used to store onboarding completion status.**
+-   **PinViewModel manages PIN setup status (persisted, likely via SharedPreferences) and provides it to the UI.**
+-   Navigation handled by Jetpack Navigation Compose.
