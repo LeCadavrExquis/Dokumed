@@ -1,0 +1,4 @@
+<resources>
+    <attr name="appWidgetBackgroundColor" format="color" />
+    <attr name="appWidgetTextColor" format="color" />
+</resources>

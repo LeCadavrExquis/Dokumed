@@ -33,6 +33,9 @@ The Dokumed app is an Android application for managing medical records. It allow
   - Medical records are exported in CSV format.
   - Profile information is exported in JSON format (using Kotlinx Serialization).
   - Attached files associated with medical records are also synced.
+- **Android Home Screen Widgets**:
+  - **Profile Summary Glance Widget**: Displays a summary of the user\\\'s profile information (name, blood type, allergies, medications, emergency contact, organ donor status, height, weight) directly on the home screen. Uses Glance API and Koin for data fetching from `ProfileRepository`. Updated periodically by `ProfileWidgetUpdateWorker` when profile data changes in the app.
+  - **Panic Button Glance Widget**: A home screen button that, when tapped, initiates an emergency sequence: sends an SMS and makes a phone call to a pre-configured emergency contact number. Uses Glance API. Configuration is handled by `PanicWidgetConfigureActivity.kt` and actions by `PanicHandlerActivity.kt`.
 
 ## Architecture
 The app follows the MVVM (Model-View-ViewModel) architecture pattern with repository abstractions:
@@ -88,12 +91,20 @@ The app follows the MVVM (Model-View-ViewModel) architecture pattern with reposi
 - `MedicalRecordListScreen`: Screen for viewing and filtering records
 - `StatisticsScreen`: Screen for viewing statistics and insights
 - `StatisticsChart`: Component for rendering different chart types
-- `ProfileScreen`: Screen for displaying user profile information and providing navigation to `ProfileEditScreen`, `MedicationReminderScreen`, and `CloudSyncScreen`.
+- `SettingsScreen`: Screen for displaying user profile information and providing navigation to `ProfileEditScreen`, `MedicationReminderScreen`, and `CloudSyncScreen`. (Renamed from ProfileScreen)
 - `ProfileEditScreen`: Screen for editing general user profile information (New).
 - `MedicationReminderScreen`: Screen for managing medication reminder settings (New).
 - `CloudSyncScreen`: Screen for managing WebDAV cloud synchronization settings (New).
 - `PinScreen`: Screen for PIN authentication.
 - `OnboardingScreen`: Multi-step screen for first-time user setup (New).
+- `ProfileSummaryWidget.kt`: In-app Composable widget displaying a summary of profile information. Takes `ProfileUIState` as a parameter.
+- `ProfileGlanceWidget.kt`: Android Home Screen widget (Glance API) displaying a summary of profile information. Fetches data via `ProfileRepository` (injected by Koin).
+- `ProfileGlanceWidgetReceiver.kt`: The `AppWidgetReceiver` for the `ProfileGlanceWidget`.
+- `PanicGlanceWidget.kt`: Android Home Screen widget (Glance API) for the panic button functionality.
+- `PanicGlanceWidgetReceiver.kt`: The `AppWidgetReceiver` for the `PanicGlanceWidget`.
+- `PanicHandlerActivity.kt`: Transparent activity to handle permissions and execute actions (SMS, call) for the `PanicGlanceWidget`.
+- `PanicWidgetConfigureActivity.kt`: Configuration activity for the `PanicGlanceWidget`. (Renamed from `PanicButtonWidgetProvider.kt`)
+- `ProfileWidgetUpdateWorker.kt`: A `CoroutineWorker` that updates the `ProfileGlanceWidget` when profile data is changed within the app. Enqueued by `ProfileViewModel`.
 
 ## Non-functional Requirements
 - **Performance**: The app should handle hundreds of medical records without performance degradation

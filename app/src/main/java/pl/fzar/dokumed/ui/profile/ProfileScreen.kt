@@ -16,8 +16,8 @@ import pl.fzar.dokumed.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(
-    navController: NavController, // Added NavController
+fun SettingsScreen( // Renamed from ProfileScreen
+    navController: NavController,
     viewModel: ProfileViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -26,7 +26,7 @@ fun ProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(id = R.string.profile_title)) }
+                title = { Text("Settings") } // Updated title - consider moving to strings.xml
             )
         }
     ) { paddingValues ->
@@ -36,6 +36,12 @@ fun ProfileScreen(
                 .padding(16.dp)
                 .verticalScroll(scrollState)
         ) {
+            // Profile Information Section
+            Text(
+                text = "Profile Information", // Added heading
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
             // Display Profile Information (Read-Only)
             ProfileDetailItem(label = stringResource(id = R.string.profile_height), value = uiState.height)
             ProfileDetailItem(label = stringResource(id = R.string.profile_weight), value = uiState.weight)
@@ -61,6 +67,11 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Navigation Buttons
+            Text(
+                text = "App Settings", // Added heading for navigation buttons
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
             Button(
                 onClick = { navController.navigate("profileEdit") /* Replace with your actual route */ },
                 modifier = Modifier.fillMaxWidth()

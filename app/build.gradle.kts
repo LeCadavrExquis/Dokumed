@@ -64,6 +64,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.google.android.material) // Add this line
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.room.runtime)
@@ -82,6 +83,12 @@ dependencies {
     implementation(libs.ktor.client.auth) // Added Ktor client auth
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.opencsv) // Added OpenCSV
+
+    // Glance API for App Widgets
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3) // Or glance-material if you prefer Material 2
+
+    implementation(libs.androidx.work.runtime.ktx) // Or the latest stable version
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

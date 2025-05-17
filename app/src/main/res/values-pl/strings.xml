@@ -54,4 +54,92 @@
     <string name="add_tag">Dodaj tag</string>
     <string name="remove_tag">Usuń tag</string>
     <string name="select_date">Wybierz datę</string>
+
+    <!-- Profile & Settings -->
+    <string name="profile_title">Profil</string>
+    <string name="profile_height">Wzrost (cm)</string>
+    <string name="profile_weight">Waga (kg)</string>
+    <string name="profile_blood_type">Grupa krwi</string>
+    <string name="profile_illnesses">Choroby</string>
+    <string name="profile_medications">Leki</string>
+    <string name="profile_allergies">Alergie</string>
+    <string name="profile_organ_donor">Dawca organów</string>
+    <string name="profile_emergency_contact">Kontakt alarmowy</string>
+    <string name="profile_emergency_contact_name">Imię i nazwisko</string>
+    <string name="profile_emergency_contact_phone">Telefon</string>
+
+    <!-- Profile Widget (In-app & Glance) -->
+    <string name="widget_profile_title">Mój profil</string>
+    <string name="widget_profile_desc">Zobacz kluczowe informacje o swoim profilu.</string>
+    <string name="widget_profile_height_label">Wzrost:</string>
+    <string name="widget_profile_weight_label">Waga:</string>
+    <string name="widget_profile_blood_type_label">Grupa krwi:</string>
+    <string name="widget_profile_organ_donor_label">Dawca:</string>
+    <string name="widget_profile_not_set">Nie ustawiono</string>
+    <string name="widget_profile_error_loading">Błąd ładowania danych</string>
+    <string name="profile_widget_description">Wyświetla podsumowanie Twojego profilu Dokumed.</string>
+    <string name="profile_widget_label">Profil Dokumed</string>
+    <string name="profile_widget_name_label">Imię i nazwisko:</string>
+    <string name="profile_widget_dob_label">Data urodzenia:</string>
+    <string name="profile_widget_blood_type_label">Grupa krwi:</string>
+    <string name="profile_widget_allergies_label">Alergie:</string>
+    <string name="profile_widget_ilnesses">Choroby:</string>
+    <string name="profile_widget_medications_label">Leki:</string>
+    <string name="profile_widget_emergency_contact_label">Kontakt alarmowy:</string>
+    <string name="profile_widget_data_unavailable">Dane profilu niedostępne</string>
+    <string name="profile_widget_loading">Ładowanie profilu...</string>
+    <string name="profile_widget_error">Błąd ładowania profilu</string>
+
+    <!-- Panic Button & Panic Glance Widget -->
+    <string name="panic_button_settings_title">Ustawienia Przycisku Paniki</string>
+    <string name="action_back">Wstecz</string>
+    <string name="panic_button_settings_description">Skonfiguruj numer telefonu alarmowego dla widżetu Przycisku Paniki. Ten numer zostanie użyty do wysłania SMS-a i wykonania połączenia po aktywacji przycisku paniki.</string>
+    <string name="action_save_emergency_contact">Zapisz kontakt alarmowy</string>
+    <string name="action_add_panic_widget">Dodaj widżet Przycisku Paniki</string>
+    <string name="panic_widget_add_manually_unsupported">Aby dodać widżet, przytrzymaj dłużej ekran główny i wybierz go z listy widżetów. Twój launcher może nie obsługiwać bezpośredniego przypinania.</string>
+    <string name="panic_button_permission_rationale">Przycisk Paniki wymaga uprawnień CALL_PHONE i SEND_SMS do poprawnego działania. Proszę przyznać te uprawnienia.</string>
+    <string name="toast_emergency_contact_saved">Kontakt alarmowy zapisany.</string>
+    <string name="toast_permissions_denied_contact_not_saved">Odmówiono uprawnień. Kontakt alarmowy nie został zapisany.</string>
+    <string name="toast_widget_pin_failed">Nie można było zażądać dodania widżetu. Upewnij się, że Twój launcher obsługuje tę funkcję.</string>
+    <string name="toast_save_number_first">Najpierw zapisz numer alarmowy.</string>
+    <string name="toast_grant_permissions_first">Najpierw przyznaj wymagane uprawnienia.</string>
+    <string name="panic_widget_name">Przycisk Paniki</string>
+    <string name="panic_widget_description">Wysyła alert do Twojego kontaktu alarmowego.</string>
+    <string name="panic_widget_button_text">ALARM</string>
+    <string name="panic_widget_configure_title">Skonfiguruj Przycisk Paniki</string>
+    <string name="panic_widget_enter_phone_number">Wprowadź numer telefonu alarmowego</string>
+    <string name="panic_widget_save_configuration">Zapisz</string>
+    <string name="panic_widget_phone_number_hint">Numer telefonu</string>
+    <string name="panic_widget_config_saved">Przycisk Paniki skonfigurowany.</string>
+    <string name="panic_widget_config_error">Błąd zapisywania konfiguracji.</string>
+    <string name="panic_widget_action_initiated">Sekwencja alarmowa rozpoczęta!</string>
+    <string name="panic_widget_action_sms_sent">SMS wysłany do kontaktu alarmowego.</string>
+    <string name="panic_widget_action_sms_failed">Nie udało się wysłać SMS-a.</string>
+    <string name="panic_widget_action_call_initiated">Dzwonienie do kontaktu alarmowego.</string>
+    <string name="panic_widget_action_call_failed">Nie udało się zainicjować połączenia.</string>
+    <string name="panic_widget_permission_denied_sms">Odmówiono uprawnień SMS. Nie można wysłać alertu.</string>
+    <string name="panic_widget_permission_denied_call">Odmówiono uprawnienia do połączeń. Nie można zadzwonić do kontaktu.</string>
+    <string name="panic_widget_no_phone_number">Numer telefonu alarmowego nie jest ustawiony. Skonfiguruj widżet.</string>
+    <string name="panic_button_widget_description_glance">Szybko wyślij alert i wezwij pomoc.</string>
+    <string name="widget_loading">Ładowanie…</string>
+    <string name="panic_widget_number_not_set">Numer alarmowy nieustawiony. Skonfiguruj widżet.</string>
+    <string name="error_reading_profile_settings">Błąd odczytu ustawień profilu.</string>
+    <string name="permissions_required_for_panic_button">Uprawnienia do połączeń i SMS są wymagane do działania przycisku paniki.</string>
+    <string name="phone_number_empty_error">Numer telefonu nie może być pusty.</string>
+    <string name="panic_widget_glance_id_error">Nie można znaleźć ID Glance dla widżetu paniki</string>
+    <string name="panic_widget_config_saved_success">Konfiguracja widżetu paniki została zapisana</string>
+    <string name="panic_button_widget_text">ALARM</string>
+
+    <string name="medical_data_widget_title">Dane medyczne</string>
+    <string name="medical_data_widget_desc">Wyświetl dane medyczne, takie jak alergie, leki i choroby.</string>
+    <string name="medical_data_widget_error_loading">Błąd ładowania danych medycznych.</string>
+    <string name="medical_data_widget_no_data">Brak danych medycznych do wyświetlenia.</string>
+    <string name="medical_data_widget_update_success">Dane medyczne zaktualizowane.</string>
+    <string name="medical_data_widget_update_error">Błąd aktualizacji danych medycznych.</string>
+    <string name="medical_data_widget_open_app">Otwórz aplikację, aby edytować dane medyczne.</string>
+
+    <!-- General -->
+    <string name="yes">Tak</string>
+    <string name="no">Nie</string>
+
 </resources>

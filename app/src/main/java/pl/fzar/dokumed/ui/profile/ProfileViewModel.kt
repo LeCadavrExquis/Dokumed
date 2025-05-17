@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,6 +18,7 @@ import pl.fzar.dokumed.data.repository.MedicalRecordRepository
 import pl.fzar.dokumed.data.repository.ProfileRepository
 import pl.fzar.dokumed.receiver.MedicationReminderReceiver
 import pl.fzar.dokumed.data.remote.WebDavService // Import the new service
+import pl.fzar.dokumed.workers.ProfileWidgetUpdateWorker
 import java.util.Calendar
 
 // Add these constants for the reminder
@@ -55,6 +58,9 @@ class ProfileViewModel(
     fun saveProfileData() {
         viewModelScope.launch {
             profileRepository.saveProfileData(_uiState.value)
+            // After successfully saving data, trigger the widget update worker
+            triggerProfileWidgetUpdate()
+
             if (_uiState.value.medicationReminderEnabled && _uiState.value.medicationReminderTime.isNotBlank()) {
                 scheduleMedicationReminder(
                     _uiState.value.medicationReminderTime,
@@ -65,6 +71,11 @@ class ProfileViewModel(
                 cancelMedicationReminder()
             }
         }
+    }
+
+    private fun triggerProfileWidgetUpdate() {
+        val workRequest = OneTimeWorkRequestBuilder<ProfileWidgetUpdateWorker>().build()
+        WorkManager.getInstance(applicationContext).enqueue(workRequest)
     }
 
     private fun scheduleMedicationReminder(time: String, medicationName: String, medicationDosage: String) {
@@ -222,7 +233,7 @@ class ProfileViewModel(
             emergencyContactName = name,
             emergencyContactPhone = phone
         )
-        saveProfileData() // Persist changes
+        saveProfileData() // Persist changes and trigger widget update via saveProfileData
     }
 
     fun updateName(name: String) {

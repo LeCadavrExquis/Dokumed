@@ -1,5 +1,6 @@
 package pl.fzar.dokumed.di
 
+import android.content.Context // Added for SharedPreferences
 import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
@@ -31,8 +32,13 @@ val databaseModule = module {
 }
 
 val repositoryModule = module {
+    // Provide the specific SharedPreferences for ProfileRepository
+    single(AppQualifiers.DokumedPrefs) {
+        androidApplication().getSharedPreferences("DokumedPrefs", Context.MODE_PRIVATE)
+    }
+
     // Repositories
-    single<ProfileRepository> { ProfileRepositoryImpl(get()) }
+    single<ProfileRepository> { ProfileRepositoryImpl(get(AppQualifiers.DokumedPrefs)) } // Inject the named SharedPreferences
     single<TagRepository> { TagRepositoryImpl(get()) } // Depends on TagDao
     single<MedicalRecordRepository> { MedicalRecordRepositoryImpl(get(), get()) } // Depends on MedicalRecordDao and TagRepository
 }
@@ -64,5 +70,5 @@ val viewModelModule = module {
 }
 
 val appModule = module {
-    includes(databaseModule, repositoryModule, serviceModule, utilModule, viewModelModule) // Include utilModule and viewModelModule
+    includes(databaseModule, repositoryModule, serviceModule, utilModule, viewModelModule, securityModule) // Include securityModule
 }

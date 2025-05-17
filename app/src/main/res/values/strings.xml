@@ -65,26 +65,26 @@
     <string name="profile_illnesses">Illnesses</string>
     <string name="profile_medications">Medications</string>
     <string name="profile_allergies">Allergies</string>
+    <string name="profile_organ_donor">Organ Donor</string>
     <string name="profile_emergency_contact">Emergency Contact</string>
     <string name="profile_emergency_contact_name">Name</string>
     <string name="profile_emergency_contact_phone">Phone</string>
-    <string name="profile_organ_donor">Organ Donor</string>
-    <string name="bottom_nav_profile">Profile</string>
 
-    <!-- Medication Reminder -->
-    <string name="profile_medication_reminder_title">Medication Reminder</string>
+    <!-- Medication Reminder Screen -->
+    <string name="profile_medication_reminder_title">Medication Reminder Settings</string>
     <string name="profile_medication_reminder_enable">Enable Reminder</string>
     <string name="profile_medication_reminder_name">Medication Name</string>
     <string name="profile_medication_reminder_dosage">Dosage</string>
-    <string name="profile_medication_reminder_time">Time (HH:MM)</string>
+    <string name="profile_medication_reminder_time">Reminder Time</string>
 
-    <!-- Notification Channel -->
-    <string name="notification_channel_medication_reminder_name">Medication Reminders</string>
-    <string name="notification_channel_medication_reminder_description">Channel for medication reminder notifications</string>
-
-    <!-- Medication Reminder Notification -->
-    <string name="medication_reminder_notification_title">Medication Reminder</string>
-    <string name="medication_reminder_notification_text">Time to take your %1$s (%2$s).</string>
+    <string name="widget_profile_title">My Profile</string>
+    <string name="widget_profile_desc">View your key profile information.</string>
+    <string name="widget_profile_height_label">Height:</string>
+    <string name="widget_profile_weight_label">Weight:</string>
+    <string name="widget_profile_blood_type_label">Blood:</string>
+    <string name="widget_profile_organ_donor_label">Donor:</string>
+    <string name="widget_profile_not_set">Not Set</string>
+    <string name="widget_profile_error_loading">Error loading data</string>
 
     <!-- Panic Button -->
     <string name="panic_button_settings_title">Panic Button Settings</string>
@@ -99,4 +99,67 @@
     <string name="toast_widget_pin_failed">Could not request to add widget. Ensure your launcher supports this feature.</string>
     <string name="toast_save_number_first">Please save an emergency number first.</string>
     <string name="toast_grant_permissions_first">Please grant required permissions first.</string>
+
+    <!-- Panic Glance Widget -->
+    <string name="panic_widget_name">Panic Button</string>
+    <string name="panic_widget_description">Sends an alert to your emergency contact.</string>
+    <string name="panic_widget_button_text">PANIC</string>
+    <string name="panic_widget_configure_title">Configure Panic Button</string>
+    <string name="panic_widget_enter_phone_number">Enter emergency phone number</string>
+    <string name="panic_widget_save_configuration">Save</string>
+    <string name="panic_widget_phone_number_hint">Phone Number</string>
+    <string name="panic_widget_config_saved">Panic button configured.</string>
+    <string name="panic_widget_config_saved_success">Panic widget configuration saved successfully</string>
+    <string name="panic_widget_config_error">Error saving configuration.</string>
+    <string name="panic_widget_action_initiated">Panic sequence initiated!</string>
+    <string name="panic_widget_action_sms_sent">SMS sent to emergency contact.</string>
+    <string name="panic_widget_action_sms_failed">Failed to send SMS.</string>
+    <string name="panic_widget_action_call_initiated">Calling emergency contact.</string>
+    <string name="panic_widget_action_call_failed">Failed to initiate call.</string>
+    <string name="panic_widget_permission_denied_sms">SMS permission denied. Cannot send alert.</string>
+    <string name="panic_widget_permission_denied_call">Call permission denied. Cannot call contact.</string>
+    <string name="panic_widget_no_phone_number">Emergency phone number not set. Please configure the widget.</string>
+    <string name="panic_button_widget_description_glance">Quickly send an alert and call for help.</string>
+    <string name="widget_loading">Loading…</string>
+    <string name="panic_widget_number_not_set">Emergency number not set. Please configure the widget.</string>
+    <string name="error_reading_profile_settings">Error reading profile settings.</string>
+    <string name="permissions_required_for_panic_button">Call and SMS permissions are required for the panic button to function.</string>
+    <string name="phone_number_empty_error">Phone number cannot be empty.</string>
+    <string name="panic_widget_glance_id_error">Could not find Glance ID for panic widget</string>
+    <string name="panic_button_widget_text">PANIC</string>
+    <string name="medical_data_widget_title">Medical Data</string>
+
+
+    <!-- Profile Glance Widget -->
+    <string name="profile_widget_label">Dokumed Profile</string>
+    <string name="profile_widget_description">View a summary of your Dokumed profile.</string>
+    <string name="profile_widget_name_label">Name:</string>
+    <string name="profile_widget_dob_label">DOB:</string>
+    <string name="profile_widget_blood_type_label">Blood Type:</string>
+    <string name="profile_widget_allergies_label">Allergies:</string>
+    <string name="profile_widget_ilnesses">Ilnesses:</string>
+    <string name="profile_widget_medications_label">Medications:</string>
+    <string name="profile_widget_emergency_contact_label">Emergency Contact:</string>
+    <string name="profile_widget_data_unavailable">Profile data unavailable</string>
+    <string name="profile_widget_loading">Loading profile...</string>
+    <string name="profile_widget_error">Error loading profile</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="panic_button_widget_label_glance">Panic Button</string>
+
+    <!-- Notification Channels -->
+    <string name="notification_channel_medication_reminder_name">Medication Reminders</string>
+    <string name="notification_channel_medication_reminder_description">Channel for medication reminder notifications.</string>
+
+    <!-- Medication Reminder Notifications -->
+    <string name="medication_reminder_notification_title">Medication Reminder</string>
+    <string name="medication_reminder_notification_text">Time to take %1$s (%2$s).</string>
+
+    <!-- Panic Handler Activity -->
+    <string name="panic_button_permissions_not_granted_widget">Permissions not granted. Panic action cancelled.</string>
+    <string name="panic_button_sms_message_widget">Emergency! I need help. This is an automated message from my Panic Button.</string>
+    <string name="panic_button_sms_sent_widget">SMS sent to emergency contact.</string>
+    <string name="panic_button_sms_failed_widget">Failed to send SMS.</string>
+    <string name="panic_button_call_failed_widget">Failed to initiate call. Please check permissions.</string>
+
 </resources>

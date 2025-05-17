@@ -7,4 +7,12 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Glance Widget Colors -->
+    <color name="widget_background_color">#F0F0F0</color> <!-- Light Grey for background -->
+    <color name="glance_text_primary">#DE000000</color> <!-- 87% Black for primary text -->
+    <color name="glance_text_secondary">#8A000000</color> <!-- 54% Black for secondary text -->
+
+    <!-- Added standard error color -->
+    <color name="design_default_color_error">#B00020</color>
 </resources>

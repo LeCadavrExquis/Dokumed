@@ -20,7 +20,7 @@ sealed class BottomNavItem(val route: String, val labelResId: Int, @DrawableRes 
     object Records : BottomNavItem("records", R.string.bottom_nav_records, R.drawable.ic_filter_list) // Use filter_list for records
     object Statistics : BottomNavItem("statistics", R.string.bottom_nav_statistics, R.drawable.ic_show_chart) // Use show_chart for statistics
     object Export : BottomNavItem("export", R.string.bottom_nav_export, R.drawable.ic_export_records) // Use export_records for export
-    object Profile : BottomNavItem("profile", R.string.bottom_nav_profile, R.drawable.ic_person) // Added Profile
+    object Profile : BottomNavItem("profile", R.string.bottom_nav_statistics, R.drawable.ic_person) // Added Profile
 }
 
 val bottomNavItems = listOf(

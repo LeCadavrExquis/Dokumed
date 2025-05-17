@@ -32,7 +32,6 @@ import pl.fzar.dokumed.ui.components.AppBottomNavigationBar
 import pl.fzar.dokumed.ui.components.BottomNavItem
 import pl.fzar.dokumed.ui.export.ExportScreen
 import pl.fzar.dokumed.ui.export.ExportViewModel
-import pl.fzar.dokumed.ui.profile.ProfileScreen
 import pl.fzar.dokumed.ui.profile.ProfileViewModel
 import pl.fzar.dokumed.ui.profile.ProfileEditScreen // Added import
 import pl.fzar.dokumed.ui.profile.MedicationReminderScreen // Added import
@@ -42,6 +41,7 @@ import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordDetailsScreen
 import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordEditScreen
 import pl.fzar.dokumed.ui.medicalRecord.MedicalRecordViewModel
 import pl.fzar.dokumed.ui.onboarding.OnboardingScreen // Import OnboardingScreen
+import pl.fzar.dokumed.ui.profile.SettingsScreen
 import pl.fzar.dokumed.ui.security.PinScreen
 import pl.fzar.dokumed.ui.statistics.StatisticsScreen
 import pl.fzar.dokumed.ui.statistics.StatisticsViewModel
@@ -271,7 +271,7 @@ class MainActivity : FragmentActivity() {
                                 )
                             }
                             composable(BottomNavItem.Profile.route) {
-                                ProfileScreen(navController, profileViewModel)
+                                SettingsScreen(navController, profileViewModel)
                             }
                             composable("profileEdit") { // Route for ProfileEditScreen
                                 ProfileEditScreen(

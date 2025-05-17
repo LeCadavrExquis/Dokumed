@@ -2,4 +2,27 @@
 <resources>
 
     <style name="Theme.Dokumed" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Theme for widget configuration activities -->
+    <style name="Theme.Dokumed.WidgetConfiguration" parent="Theme.Material3.DayNight.Dialog.MinWidth">
+        <!-- Customize attributes here, e.g., window background, text colors -->
+        <item name="android:windowBackground">@android:color/white</item>
+        <!-- Removed problematic lines referencing design_default_color_* as they are not part of Material 3 -->
+        <!-- If you need to customize colors, use Material 3 attributes and your app's defined colors -->
+        <!-- Example:
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorSecondary">@color/teal_200</item>
+        -->
+    </style>
+
+    <!-- Theme for transparent activities -->
+    <style name="Theme.Dokumed.TransparentActivity" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
 </resources>

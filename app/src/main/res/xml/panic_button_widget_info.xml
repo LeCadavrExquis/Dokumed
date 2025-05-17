@@ -2,10 +2,13 @@
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="110dp"
     android:minHeight="40dp"
-    android:updatePeriodMillis="86400000"
-    android:previewImage="@android:drawable/ic_dialog_alert"
-    android:initialLayout="@layout/panic_button_widget_layout"
+    android:updatePeriodMillis="0"
+    android:previewImage="@drawable/ic_widget_preview_panic"
+    android:initialLayout="@layout/glance_default_layout"
     android:configure="pl.fzar.dokumed.widgets.PanicButtonWidgetConfigureActivity"
-    android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen">
+    android:resizeMode="none"
+    android:widgetCategory="home_screen"
+    android:targetCellWidth="2"
+    android:targetCellHeight="1"
+    android:description="@string/panic_button_widget_description_glance">
 </appwidget-provider>

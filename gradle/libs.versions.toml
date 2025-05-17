@@ -27,9 +27,13 @@ roomRuntime = "2.7.1"
 ksp = "2.1.20-2.0.0"
 androidxBiometric = "1.2.0-alpha05"
 securityCrypto = "1.1.0-alpha07"
+androidxGlance = "1.1.0"
+workRuntimeKtx = "2.10.1"
+material = "1.12.0" # Add this line
 
 [libraries]
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workRuntimeKtx" }
 koin-core = { module = "io.insert-koin:koin-core", version = "3.5.3" }
 koin-android = { module = "io.insert-koin:koin-android", version = "3.5.3" }
 koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version = "3.5.3" }
@@ -62,6 +66,9 @@ ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx
 mpandroidchart = { module = "com.github.PhilJay:MPAndroidChart", version.ref = "mpandroidchart" }
 androidx-biometric = { group = "androidx.biometric", name = "biometric-ktx", version.ref = "androidxBiometric" }
 opencsv = { module = "com.opencsv:opencsv", version.ref = "opencsv" }
+androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "androidxGlance" }
+androidx-glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "androidxGlance" }
+google-android-material = { group = "com.google.android.material", name = "material", version.ref = "material" } # Add this line
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

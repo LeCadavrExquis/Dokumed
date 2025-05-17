@@ -25,7 +25,7 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import org.koin.androidx.compose.koinViewModel
 import pl.fzar.dokumed.R
-import pl.fzar.dokumed.widgets.PanicButtonWidgetProvider
+import pl.fzar.dokumed.widgets.glance.PanicGlanceWidget // Import for Glance widget
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,7 +66,8 @@ fun PanicButtonSettingsScreen(
     }
 
     val appWidgetManager = AppWidgetManager.getInstance(context)
-    val componentName = ComponentName(context, PanicButtonWidgetProvider::class.java)
+    // Use the Glance widget's class for the component name
+    val componentName = ComponentName(context, PanicGlanceWidget::class.java)
 
     Scaffold(
         topBar = {

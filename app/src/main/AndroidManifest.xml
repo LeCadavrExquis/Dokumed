@@ -63,7 +63,47 @@
             </intent-filter>
         </receiver>
 
-        <!-- Panic Button Widget -->
+        <!-- Glance Panic Button Widget -->
+        <receiver
+            android:name=".widgets.glance.PanicGlanceWidgetReceiver"
+            android:exported="true"
+            android:label="@string/panic_button_widget_label_glance">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/panic_button_widget_info" />
+        </receiver>
+        <activity
+            android:name=".widgets.PanicButtonWidgetConfigureActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Dokumed.WidgetConfiguration">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".widgets.glance.PanicHandlerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Dokumed.TransparentActivity" />
+
+
+        <!-- Profile Glance Widget Receiver -->
+        <receiver
+            android:name=".widgets.glance.ProfileGlanceWidgetReceiver"
+            android:exported="true"
+            android:label="@string/profile_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/profile_widget_info" />
+        </receiver>
+
+        <!-- Remove or comment out the old PanicButtonWidgetProvider -->
+        <!--
         <receiver
             android:name=".widgets.PanicButtonWidgetProvider"
             android:exported="false">
@@ -75,13 +115,7 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/panic_button_widget_info" />
         </receiver>
-        <activity
-            android:name=".widgets.PanicButtonWidgetConfigureActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
-            </intent-filter>
-        </activity>
+        -->
 
     </application>
 
