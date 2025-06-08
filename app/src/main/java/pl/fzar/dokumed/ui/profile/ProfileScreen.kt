@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import org.koin.androidx.compose.koinViewModel
 import pl.fzar.dokumed.R
+import pl.fzar.dokumed.navigation.Routes // Import Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,28 +74,28 @@ fun SettingsScreen( // Renamed from ProfileScreen
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             Button(
-                onClick = { navController.navigate("profileEdit") /* Replace with your actual route */ },
+                onClick = { navController.navigate(Routes.PROFILE_EDIT) }, // Use Routes.PROFILE_EDIT
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Edit Profile Details")
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(
-                onClick = { navController.navigate("medicationReminders") /* Replace with your actual route */ },
+                onClick = { navController.navigate(Routes.MEDICATION_REMINDERS) }, // Use Routes.MEDICATION_REMINDERS
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Medication Reminders")
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(
-                onClick = { navController.navigate("cloudSync") /* Replace with your actual route */ },
+                onClick = { navController.navigate(Routes.CLOUD_SYNC) }, // Use Routes.CLOUD_SYNC
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Cloud Sync Settings")
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(
-                onClick = { navController.navigate("panicButtonSettings") },
+                onClick = { navController.navigate(Routes.PANIC_BUTTON_SETTINGS) }, // Use Routes.PANIC_BUTTON_SETTINGS
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Panic Button Settings")

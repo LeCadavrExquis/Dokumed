@@ -37,6 +37,7 @@
     <string name="summary_count">Liczba: %d</string>
     <string name="bottom_nav_records">Wpisy</string>
     <string name="bottom_nav_statistics">Statystyki</string>
+    <string name="bottom_nav_settings">Ustawienia</string>
     <string name="bottom_nav_export">Eksport</string>
     <string name="delete_record_content_description">Usuń wpis</string>
     <string name="deletion_confirmation_title">Potwierdzenie usunięcia</string>

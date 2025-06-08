@@ -105,6 +105,7 @@ The app follows the MVVM (Model-View-ViewModel) architecture pattern with reposi
 - `PanicHandlerActivity.kt`: Transparent activity to handle permissions and execute actions (SMS, call) for the `PanicGlanceWidget`.
 - `PanicWidgetConfigureActivity.kt`: Configuration activity for the `PanicGlanceWidget`. (Renamed from `PanicButtonWidgetProvider.kt`)
 - `ProfileWidgetUpdateWorker.kt`: A `CoroutineWorker` that updates the `ProfileGlanceWidget` when profile data is changed within the app. Enqueued by `ProfileViewModel`.
+- `AppBottomNavigationBar.kt`: Composable for the main bottom navigation bar. Uses route constants from `navigation/Routes.kt`.
 
 ## Non-functional Requirements
 - **Performance**: The app should handle hundreds of medical records without performance degradation
@@ -185,4 +186,4 @@ Dokumed is a mobile application for managing medical records securely and effici
 -   Coroutines for asynchronous operations.
 -   **SharedPreferences used to store onboarding completion status.**
 -   **PinViewModel manages PIN setup status (persisted, likely via SharedPreferences) and provides it to the UI.**
--   Navigation handled by Jetpack Navigation Compose.
+-   Navigation handled by Jetpack Navigation Compose. All navigation routes are centralized in `navigation/Routes.kt`.

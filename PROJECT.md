@@ -22,6 +22,9 @@ The project follows a clean architecture approach with the following layers:
 - **ViewModels**: Managing UI state and business logic
 - **Composables**: UI components using Jetpack Compose
 
+#### Documentation
+- **LaTeX Files**: Project documentation in LaTeX format, located in the `/doc` folder.
+
 ## Applications
 
 For application-specific documentation, see:

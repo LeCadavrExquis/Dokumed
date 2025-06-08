@@ -18,7 +18,7 @@ import pl.fzar.dokumed.data.entity.TagEntity
     MeasurementEntity::class,
     TagEntity::class,
     MedicalRecordTagCrossRef::class,
-], version = 2, exportSchema = false)
+], version = 1, exportSchema = true)
 @TypeConverters(
     MedicalRecordTypeConverter::class,
     LocalDateConverter::class,
@@ -38,7 +38,8 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "medical_database"
-                ).build()
+                ).fallbackToDestructiveMigration() // Add this line
+                 .build()
                 INSTANCE = instance
                 instance
             }

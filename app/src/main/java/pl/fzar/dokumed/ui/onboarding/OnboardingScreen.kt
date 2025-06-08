@@ -24,21 +24,17 @@ import pl.fzar.dokumed.ui.profile.ProfileViewModel
 fun OnboardingScreen(
     pinViewModel: PinViewModel,
     profileViewModel: ProfileViewModel,
-    onFinishOnboarding: () -> Unit
+    onFinishOnboarding: () -> Unit // This lambda will now be invoked to signal completion
 ) {
-    val pagerState = rememberPagerState(pageCount = { 4 }) // Assuming 4 pages for now: Welcome, Features, PIN, Profile
+    val pagerState = rememberPagerState(pageCount = { 4 })
     val coroutineScope = rememberCoroutineScope()
 
-    // State for PinSetupPage
     var pinValue by remember { mutableStateOf("") }
     var confirmPinValue by remember { mutableStateOf("") }
     var pinErrorMessage by remember { mutableStateOf<String?>(null) }
 
-    // State for ProfileSetupPage
     var profileNameValue by remember { mutableStateOf("") }
     var profileBloodTypeValue by remember { mutableStateOf("") }
-    // Add more profile fields here if needed, e.g.:
-    // var profileAllergiesValue by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize()) {
         HorizontalPager(
@@ -57,12 +53,10 @@ fun OnboardingScreen(
                     errorMessage = pinErrorMessage
                 )
                 3 -> ProfileSetupPage(
-                    // profileViewModel = profileViewModel, // Pass if ProfileSetupPage needs to call it directly
                     name = profileNameValue,
                     onNameChange = { profileNameValue = it },
                     bloodType = profileBloodTypeValue,
                     onBloodTypeChange = { profileBloodTypeValue = it }
-                    // Pass other profile states and their setters here
                 )
                 else -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("Page $page (Placeholder)")
@@ -77,10 +71,6 @@ fun OnboardingScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Pin state needed for validation before proceeding from PinSetupPage
-            // This is a simplified way; ideally, PinSetupPage would expose its state or a validation function.
-            // val pinPageState = remember { mutableStateMapOf<String, String>() } // Removed, using hoisted state now
-
             if (pagerState.currentPage > 0) {
                 Button(onClick = {
                     coroutineScope.launch {
@@ -90,39 +80,32 @@ fun OnboardingScreen(
                     Text("Back")
                 }
             } else {
-                Spacer(modifier = Modifier.weight(1f)) // Keep alignment
+                Spacer(modifier = Modifier.weight(1f))
             }
 
             Button(onClick = {
                 coroutineScope.launch {
-                    if (pagerState.currentPage == 2) { // Pin Setup Page
-                        if (pinValue.length != 6) {
-                            pinErrorMessage = "PIN must be 6 digits."
+                    if (pagerState.currentPage == 2) {
+                        if (pinValue.length != 4) {
+                            pinErrorMessage = "PIN must be 4 digits."
                             return@launch
                         }
                         if (pinValue != confirmPinValue) {
                             pinErrorMessage = "PINs do not match."
                             return@launch
                         }
-                        pinErrorMessage = null // Clear error
-                        pinViewModel.setPin(pinValue) // Save the PIN
+                        pinErrorMessage = null
+                        pinViewModel.setPin(pinValue)
                     }
 
                     if (pagerState.currentPage < pagerState.pageCount - 1) {
-                        // Only advance if PIN validation passed (it would have returned early otherwise)
                         pagerState.animateScrollToPage(pagerState.currentPage + 1)
                     } else {
-                        // This is the last page (Profile Setup) and "Finish" is clicked
-                        if (pagerState.currentPage == 3) { // Current page is Profile Setup
-                            // Save profile data using ProfileViewModel
-                            // Assuming ProfileViewModel has methods to update and save data.
-                            // Adjust these calls based on your ProfileViewModel's actual API.
-                            profileViewModel.updateName(profileNameValue) // Example method
-                            profileViewModel.updateBloodType(profileBloodTypeValue) // Example method
-                            // If your ProfileViewModel requires an explicit save call:
-                            // profileViewModel.saveProfileData()
+                        if (pagerState.currentPage == 3) {
+                            profileViewModel.updateName(profileNameValue)
+                            profileViewModel.updateBloodType(profileBloodTypeValue)
                         }
-                        onFinishOnboarding()
+                        onFinishOnboarding() // Call the lambda to signal completion
                     }
                 }
             }) {
@@ -240,7 +223,7 @@ fun PinSetupPage(
             onValueChange = { newValue ->
                 onPinChange(newValue.filter { it.isDigit() }.take(6))
             },
-            label = { Text("Enter PIN (6 digits)") },
+            label = { Text("Enter PIN (4 digits)") },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             singleLine = true,

@@ -19,6 +19,7 @@ import org.koin.core.component.inject // Ensure inject is imported
 // private const val PIN_KEY = "app_pin" // No longer needed for storing actual PIN
 private const val BIOMETRIC_ENABLED_KEY = "biometric_enabled"
 private const val TEMP_PIN_PREF_KEY = "temp_pin" // For confirming PIN during setup
+private const val PIN_LENGTH = 4
 
 class PinViewModel(application: Application) : ViewModel(), KoinComponent {
 
@@ -92,7 +93,7 @@ class PinViewModel(application: Application) : ViewModel(), KoinComponent {
     }
 
     fun onPinDigitEntered(digit: String) {
-        if (_pinInput.value.length < 6) { // Assuming MAX_PIN_LENGTH is 6, make this a const
+        if (_pinInput.value.length < PIN_LENGTH) {
             _pinInput.value += digit
         }
     }
@@ -105,8 +106,8 @@ class PinViewModel(application: Application) : ViewModel(), KoinComponent {
 
     fun onPinConfirmClicked() {
         val currentPin = _pinInput.value
-        if (currentPin.length < 4) { // Assuming MIN_PIN_LENGTH is 4, make this a const
-            _toastMessage.value = "PIN must be at least 4 digits"
+        if (currentPin.length != PIN_LENGTH) {
+            _toastMessage.value = "PIN must be $PIN_LENGTH digits"
             return
         }
 

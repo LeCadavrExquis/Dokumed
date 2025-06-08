@@ -1,6 +1,7 @@
 package pl.fzar.dokumed.ui.components
 
 import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -14,20 +15,21 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import pl.fzar.dokumed.R
+import pl.fzar.dokumed.navigation.Routes
 
-// Define sealed class for Bottom Navigation Items using DrawableRes
-sealed class BottomNavItem(val route: String, val labelResId: Int, @DrawableRes val iconResId: Int) {
-    object Records : BottomNavItem("records", R.string.bottom_nav_records, R.drawable.ic_filter_list) // Use filter_list for records
-    object Statistics : BottomNavItem("statistics", R.string.bottom_nav_statistics, R.drawable.ic_show_chart) // Use show_chart for statistics
-    object Export : BottomNavItem("export", R.string.bottom_nav_export, R.drawable.ic_export_records) // Use export_records for export
-    object Profile : BottomNavItem("profile", R.string.bottom_nav_statistics, R.drawable.ic_person) // Added Profile
-}
+// Define a data class for Bottom Navigation Screen items
+data class BottomNavScreen(
+    val route: String,
+    @StringRes val labelResId: Int,
+    @DrawableRes val iconResId: Int
+)
 
-val bottomNavItems = listOf(
-    BottomNavItem.Records,
-    BottomNavItem.Statistics,
-    BottomNavItem.Export,
-    BottomNavItem.Profile // Added Profile
+// List of bottom navigation screens using routes from Routes.kt
+val bottomNavScreens = listOf(
+    BottomNavScreen(Routes.RECORDS, R.string.bottom_nav_records, R.drawable.ic_filter_list),
+    BottomNavScreen(Routes.STATISTICS, R.string.bottom_nav_statistics, R.drawable.ic_show_chart),
+    BottomNavScreen(Routes.EXPORT, R.string.bottom_nav_export, R.drawable.ic_export_records),
+    BottomNavScreen(Routes.PROFILE_SETTINGS, R.string.bottom_nav_settings, R.drawable.ic_person) // Corrected route to PROFILE_SETTINGS
 )
 
 @Composable
@@ -36,24 +38,17 @@ fun AppBottomNavigationBar(navController: NavController) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
 
-        bottomNavItems.forEach { screen ->
+        bottomNavScreens.forEach { screen ->
             NavigationBarItem(
-                // Use painterResource for drawable icons
                 icon = { Icon(painterResource(id = screen.iconResId), contentDescription = stringResource(screen.labelResId)) },
                 label = { Text(stringResource(screen.labelResId)) },
                 selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                 onClick = {
                     navController.navigate(screen.route) {
-                        // Pop up to the start destination of the graph to
-                        // avoid building up a large stack of destinations
-                        // on the back stack as users select items
                         popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true
                         }
-                        // Avoid multiple copies of the same destination when
-                        // reselecting the same item
                         launchSingleTop = true
-                        // Restore state when reselecting a previously selected item
                         restoreState = true
                     }
                 }
